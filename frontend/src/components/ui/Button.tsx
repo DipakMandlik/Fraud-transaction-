@@ -17,7 +17,7 @@ const variantClasses: Record<Variant, string> = {
   ghost: "text-slate-600 hover:bg-slate-100",
   danger: "bg-fraud text-white hover:bg-red-700 shadow-sm",
   success: "bg-success text-white hover:bg-green-700 shadow-sm",
-  warning: "bg-warning text-white hover:bg-orange-700 shadow-sm",
+  warning: "bg-amber-500 text-white hover:bg-amber-600 shadow-sm",
 };
 
 const sizeClasses: Record<Size, string> = {

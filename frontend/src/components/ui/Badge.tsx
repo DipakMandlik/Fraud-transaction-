@@ -2,12 +2,13 @@ import type { HTMLAttributes } from "react";
 
 import { cn } from "@/lib/utils";
 
-type Tone = "slate" | "blue" | "green" | "orange" | "red" | "purple";
+type Tone = "slate" | "blue" | "green" | "amber" | "orange" | "red" | "purple";
 
 const toneClasses: Record<Tone, string> = {
   slate: "bg-slate-100 text-slate-700",
   blue: "bg-primary-50 text-primary-700",
   green: "bg-success-light text-green-800",
+  amber: "bg-amber-100 text-amber-800",
   orange: "bg-warning-light text-orange-800",
   red: "bg-fraud-light text-red-800",
   purple: "bg-purple-100 text-purple-800",
@@ -38,10 +39,18 @@ const toneDotClasses: Record<Tone, string> = {
   slate: "bg-slate-500",
   blue: "bg-primary",
   green: "bg-success",
+  amber: "bg-amber-500",
   orange: "bg-warning",
   red: "bg-fraud",
   purple: "bg-purple-500",
 };
+
+/**
+ * Color legend used consistently across the app:
+ *   Blue = navigation / neutral review · Green = approved · Amber = pending
+ *   OTP / under-review action needed · Orange = elevated / high risk ·
+ *   Red = critical fraud / blocked.
+ */
 
 export function statusTone(status: string): Tone {
   switch (status) {
@@ -50,7 +59,7 @@ export function statusTone(status: string): Tone {
     case "BLOCKED":
       return "red";
     case "OTP_PENDING":
-      return "orange";
+      return "amber";
     case "REVIEW":
       return "blue";
     default:
@@ -83,7 +92,7 @@ export function alertStatusTone(status: string): Tone {
     case "OPEN":
       return "red";
     case "INVESTIGATING":
-      return "orange";
+      return "amber";
     case "FALSE_POSITIVE":
       return "slate";
     case "CLOSED":
