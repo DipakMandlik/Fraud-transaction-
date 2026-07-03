@@ -3,26 +3,23 @@
 ## Overview
 
 The platform persists all state in **PostgreSQL**, accessed through
-SQLAlchemy's ORM (`sqlalchemy.orm.DeclarativeBase`). Every table is defined as
-a single `Base` subclass under `backend/app/models/`, one file per table.
-Tables are created via `Base.metadata.create_all(bind=engine)` on application
-startup (`backend/app/seed.py: run_seed()`) — this is **non-destructive**: it
-creates any table that does not yet exist but never drops or rewrites an
-existing one. Reference data (countries, merchants, blacklists, ~100 customer
-profiles with their accounts/devices/beneficiaries, the fraud rule catalog,
-and two demo users) is then seeded idempotently on top.
+SQLAlchemy's ORM (`sqlalchemy.orm.DeclarativeBase`). Every table is a single
+`Base` subclass under `backend/app/models/`, one file per table. Tables are
+created via `Base.metadata.create_all(bind=engine)` on application startup
+(`backend/app/seed.py: run_seed()`) — non-destructive: it creates any table
+that does not yet exist but never drops or rewrites an existing one.
+Reference data (countries, merchants, blacklists, ~100 customer profiles with
+their accounts/devices/beneficiaries, the fraud rule catalog, and two demo
+users) is then seeded idempotently on top.
 
-There is no separate ORM migration framework (e.g. Alembic) in this repo;
-schema evolution to date has been additive — for example, the
-`rule_evaluations` and `processing_ms` columns on `transactions` (see below)
-were added directly as new columns on the `Transaction` model rather than by
-altering or reshaping any existing column, so `create_all()` picks them up on
-any fresh database. On a database that already has the `transactions` table
-from before these columns existed, they would need an explicit additive
-column migration (e.g. `ALTER TABLE transactions ADD COLUMN ...`) since
+There is no separate migration framework (e.g. Alembic) in this repo; schema
+evolution has been additive — the `rule_evaluations` and `processing_ms`
+columns on `transactions` (below) were added directly as new columns on the
+`Transaction` model, so `create_all()` picks them up on any fresh database.
+On a database that predates these columns, they would need an explicit
+additive migration (`ALTER TABLE transactions ADD COLUMN ...`), since
 `create_all()` only creates missing tables, not missing columns on existing
-tables — the model and seed code do not currently perform that step
-automatically.
+ones — that step is not automated in this codebase.
 
 ## Entity-Relationship Diagram
 
@@ -415,15 +412,14 @@ Relationships: belongs to `Customer`, `Account`, `Country`; optionally
 (`back_populates="transaction"`, `uselist=False`).
 
 **`triggered_rules` vs. `rule_evaluations`**: `triggered_rules` is the
-compact, historical field — a JSON dict naming only the rules that fired, used
-for quick filtering/reporting. `rule_evaluations` is the newer, richer field —
-a JSON list recording every enabled rule's verdict, pass and fail alike, with
-its category, weight, and a human-readable `detail` string — so the frontend
-can render a full live "rule execution" checklist for a transaction, not just
-the subset that triggered. Both are populated together by
-`TransactionEngine.process()` for every transaction. `processing_ms` is stored
-alongside them purely for observability/demo purposes (showing sub-second
-scoring latency) and plays no role in the risk decision itself.
+compact, historical field — a JSON dict naming only the rules that fired.
+`rule_evaluations` is the richer field — a JSON list recording every enabled
+rule's verdict, pass and fail alike (category, weight, `detail` string), so
+the frontend can render a full live "rule execution" checklist, not just the
+triggered subset. Both are populated together by `TransactionEngine.process()`
+for every transaction. `processing_ms` is stored alongside them for
+observability/demo purposes (sub-second scoring latency) and plays no role in
+the risk decision itself.
 
 ### `fraud_alerts` (`app/models/fraud_alert.py`)
 
@@ -518,15 +514,10 @@ check happens lazily on each request).
 
 ## Indexing Summary
 
-Every foreign key column used in hot-path filtering is indexed:
-`customers.customer_code/city/risk_segment/status`,
-`accounts.account_number/customer_id`, `devices.device_uid/customer_id`,
-`beneficiaries.customer_id`, `merchants.name`, `countries.name`,
-`blacklists.entity_type/entity_value`, `rules.code`,
-`transactions.transaction_ref/customer_id/account_id/amount/transaction_type/status/risk_score/is_fraud/timestamp`,
-`fraud_alerts.alert_ref/transaction_id/customer_id/severity/status/created_at`,
-`investigations.alert_id`, `audit_logs.entity_type/entity_id/created_at`,
-`users.username`, `sessions.token/username`. This keeps the dashboard,
-transaction feed, alert queue, and velocity/geolocation rule checks
-(all of which filter or sort by these columns) index-backed rather than
-falling back to sequential scans as data volume grows.
+Every column used in hot-path filtering/sorting is indexed, including all
+foreign keys on `transactions` and `fraud_alerts`, plus
+`transactions.transaction_ref/amount/transaction_type/status/risk_score/is_fraud/timestamp`
+and `fraud_alerts.alert_ref/severity/status/created_at`. This keeps the
+dashboard, transaction feed, alert queue, and velocity/geolocation rule
+checks index-backed rather than falling back to sequential scans as data
+volume grows.
