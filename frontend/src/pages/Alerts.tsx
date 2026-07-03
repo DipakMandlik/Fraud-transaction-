@@ -72,7 +72,7 @@ export default function Alerts() {
             ))}
           </div>
         ) : (query.data?.items.length ?? 0) === 0 ? (
-          <EmptyState icon={ShieldAlert} title="No fraud alerts" description="All clear right now." />
+          <EmptyState icon={ShieldAlert} title="No Active Alerts" description="All clear right now." />
         ) : (
           <>
             <Table>

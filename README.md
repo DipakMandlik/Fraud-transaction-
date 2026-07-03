@@ -1,4 +1,6 @@
-# PiBy3 Fraud Intelligence Platform
+# Fraud Detection Platform
+
+_Powered by PiByThree — Enterprise AI Solutions_
 
 A production-style demonstration of a Tier-1 bank's real-time fraud monitoring
 system: a continuous transaction stream, a configurable rule + risk scoring

@@ -66,7 +66,7 @@ export default function Customers() {
             ))}
           </div>
         ) : (query.data?.items.length ?? 0) === 0 ? (
-          <EmptyState icon={Users} title="No customers found" />
+          <EmptyState icon={Users} title="No Customer Matches" description="Try a different name, ID, phone or email." />
         ) : (
           <>
             <Table>

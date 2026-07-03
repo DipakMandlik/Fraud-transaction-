@@ -25,11 +25,11 @@ const NAV_ITEMS = [
 export function Sidebar() {
   return (
     <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-slate-200 bg-white">
-      <div className="flex h-16 items-center gap-2.5 border-b border-slate-100 px-5">
-        <Logo size="sm" className="rounded-md" />
+      <div className="flex min-h-16 items-center gap-2.5 border-b border-slate-100 px-4 py-3">
+        <Logo size="sm" className="shrink-0 rounded-md" />
         <div className="min-w-0">
-          <p className="truncate text-sm font-bold leading-tight text-slate-900">Fraud Intelligence</p>
-          <p className="mt-0.5 truncate text-[11px] leading-none text-slate-400">Platform</p>
+          <p className="text-[13px] font-bold leading-tight text-slate-900">Fraud Detection Platform</p>
+          <p className="mt-0.5 truncate text-[11px] leading-none text-slate-400">Powered by PiByThree</p>
         </div>
       </div>
 
@@ -42,7 +42,7 @@ export function Sidebar() {
             className={({ isActive }) =>
               cn(
                 "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600",
-                "transition-all duration-150 ease-out",
+                "transition-all duration-[250ms] ease-out",
                 "hover:bg-slate-50 hover:text-slate-900",
                 isActive
                   ? "bg-primary-50 font-semibold text-primary-700 hover:bg-primary-50 hover:text-primary-700"

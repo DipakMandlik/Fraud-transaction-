@@ -101,7 +101,11 @@ export default function Transactions() {
             ))}
           </div>
         ) : (query.data?.items.length ?? 0) === 0 ? (
-          <EmptyState icon={ListTree} title="No transactions found" description="Try adjusting your filters." />
+          <EmptyState
+            icon={ListTree}
+            title={filters.is_fraud ? "No Suspicious Transactions Detected" : "No Transactions Found"}
+            description="Try adjusting your filters."
+          />
         ) : (
           <>
             <Table>

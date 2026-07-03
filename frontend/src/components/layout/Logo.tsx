@@ -11,13 +11,13 @@ const SIZE_CLASSES: Record<NonNullable<LogoProps["size"]>, string> = {
   lg: "h-16",
 };
 
-/** The PiBy3 mark. A single shared component so every placement (sidebar,
+/** The PiByThree mark. A single shared component so every placement (sidebar,
  * login, footer, print) stays pixel-consistent and never gets stretched. */
 export function Logo({ className, size = "md" }: LogoProps) {
   return (
     <img
       src="/pibythree-logo.jpg"
-      alt="PiBy3"
+      alt="PiByThree"
       className={cn("w-auto object-contain", SIZE_CLASSES[size], className)}
     />
   );

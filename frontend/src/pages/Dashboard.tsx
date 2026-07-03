@@ -17,6 +17,7 @@ import { GeoHeatMap } from "@/components/dashboard/GeoHeatMap";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { LatestAlertsList } from "@/components/dashboard/LatestAlertsList";
 import { LiveActivityFeed } from "@/components/dashboard/LiveActivityFeed";
+import { WelcomeBanner } from "@/components/dashboard/WelcomeBanner";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { dashboardApi, transactionsApi } from "@/lib/api";
 import { formatCurrency, formatNumber } from "@/lib/utils";
@@ -37,7 +38,11 @@ export default function Dashboard() {
   const kpis = dashboardQuery.data?.kpis;
 
   return (
-    <AppLayout title="Fraud Detection Dashboard" subtitle="Real-time transaction monitoring & risk overview">
+    <AppLayout
+      title="Fraud Operations Command Center"
+      subtitle="Real-Time Transaction Monitoring, AI Risk Scoring & Fraud Investigation"
+    >
+      <WelcomeBanner />
       {dashboardQuery.isLoading ? (
         <DashboardSkeleton />
       ) : (
