@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   ListTree,
+  Radar,
   ShieldAlert,
   ShieldCheck,
   SlidersHorizontal,
@@ -12,6 +13,7 @@ import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
+  { to: "/simulator", label: "Transaction Simulator", icon: Radar },
   { to: "/transactions", label: "Transactions", icon: ListTree },
   { to: "/customers", label: "Customers", icon: Users },
   { to: "/alerts", label: "Fraud Alert Center", icon: ShieldAlert },

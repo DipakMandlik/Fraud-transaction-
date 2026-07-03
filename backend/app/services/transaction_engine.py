@@ -2,6 +2,7 @@
 
 import random
 import string
+import time
 from datetime import datetime
 from app.utils.time import utcnow
 
@@ -56,13 +57,18 @@ class TransactionEngine:
         fraud_scenario: str | None,
         is_fraud_injected: bool,
     ) -> Transaction:
+        started_at = time.perf_counter()
+
         ctx = build_context(db, proposed)
 
         rules = db.query(Rule).all()
-        triggered = self.rule_engine.evaluate(ctx, rules)
+        all_evaluations = self.rule_engine.evaluate_all(ctx, rules)
+        triggered = [e for e in all_evaluations if e.triggered]
         assessment = self.risk_engine.score(triggered)
         explanation = build_explanation(assessment)
         reason = build_reason_summary(assessment)
+
+        processing_ms = round((time.perf_counter() - started_at) * 1000, 2)
 
         txn = Transaction(
             transaction_ref=_generate_ref("TXN"),
@@ -87,6 +93,14 @@ class TransactionEngine:
             is_fraud=is_fraud_injected,
             fraud_scenario=fraud_scenario,
             triggered_rules={"rules": [r.code for r in triggered]},
+            rule_evaluations=[
+                {
+                    "code": e.code, "name": e.name, "category": e.category,
+                    "weight": e.weight, "triggered": e.triggered, "detail": e.detail,
+                }
+                for e in all_evaluations
+            ],
+            processing_ms=processing_ms,
             reason=reason,
             timestamp=proposed.timestamp,
         )

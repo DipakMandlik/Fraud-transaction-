@@ -65,7 +65,7 @@ def _base_kwargs(customer: Customer, timestamp: datetime) -> dict:
     }
 
 
-def _fire(db: Session, customer: Customer, transaction_type: str, amount: float, scenario: str, **overrides) -> None:
+def _fire(db: Session, customer: Customer, transaction_type: str, amount: float, scenario: str, **overrides):
     kwargs = _base_kwargs(customer, overrides.pop("timestamp", utcnow()))
     kwargs.update(overrides)
 
@@ -105,7 +105,7 @@ def _fire(db: Session, customer: Customer, transaction_type: str, amount: float,
     )
 
     try:
-        _engine.process(
+        return _engine.process(
             db=db,
             proposed=proposed,
             account=kwargs["account"],
@@ -119,201 +119,240 @@ def _fire(db: Session, customer: Customer, transaction_type: str, amount: float,
     except Exception:
         db.rollback()
         logger.exception("Failed to inject fraud scenario %s", scenario)
+        return None
 
 
-def scenario_large_transaction(db: Session) -> None:
+def scenario_large_transaction(db: Session) -> list:
     customer = _random_active_customer(db)
     if not customer:
-        return
+        return []
     amount = random.uniform(150000, 900000)
-    _fire(db, customer, random.choice(["NEFT", "RTGS", "IMPS"]), amount, "LARGE_TRANSACTION")
+    txn = _fire(db, customer, random.choice(["NEFT", "RTGS", "IMPS"]), amount, "LARGE_TRANSACTION")
+    return [txn] if txn else []
 
 
-def scenario_new_device(db: Session) -> None:
+def scenario_new_device(db: Session) -> list:
     customer = _random_active_customer(db)
     if not customer:
-        return
+        return []
     amount = random.uniform(20000, 120000)
-    _fire(db, customer, random.choice(["UPI", "DEBIT_CARD"]), amount, "NEW_DEVICE", device_uid=data_factory.random_device_uid())
+    txn = _fire(db, customer, random.choice(["UPI", "DEBIT_CARD"]), amount, "NEW_DEVICE", device_uid=data_factory.random_device_uid())
+    return [txn] if txn else []
 
 
-def scenario_foreign_location(db: Session) -> None:
+def scenario_foreign_location(db: Session) -> list:
     customer = _random_active_customer(db)
     if not customer:
-        return
+        return []
     loc = random.choice(FOREIGN_HIGH_RISK_LOCATIONS)
     amount = random.uniform(30000, 250000)
-    _fire(
+    txn = _fire(
         db, customer, random.choice(["CREDIT_CARD", "DEBIT_CARD"]), amount, "FOREIGN_LOCATION",
         latitude=loc["lat"], longitude=loc["lon"], city=loc["city"], country_name=loc["country"], is_foreign=True,
         ip_address=data_factory.random_ip(domestic=False),
     )
+    return [txn] if txn else []
 
 
-def scenario_impossible_travel(db: Session) -> None:
+def scenario_impossible_travel(db: Session) -> list:
     customer = _random_active_customer(db)
     if not customer or not customer.accounts:
-        return
+        return []
     home_city = next((c for c in INDIAN_CITIES if c["city"] == customer.city), INDIAN_CITIES[0])
     t1, t2 = _sequence_timestamps(2, 45, 180)
-    _fire(db, customer, "UPI", random.uniform(500, 5000), "IMPOSSIBLE_TRAVEL",
-          latitude=home_city["lat"], longitude=home_city["lon"], city=home_city["city"], timestamp=t1)
+    results = []
+    results.append(_fire(db, customer, "UPI", random.uniform(500, 5000), "IMPOSSIBLE_TRAVEL",
+          latitude=home_city["lat"], longitude=home_city["lon"], city=home_city["city"], timestamp=t1))
 
     loc = random.choice(FOREIGN_HIGH_RISK_LOCATIONS)
-    _fire(
+    results.append(_fire(
         db, customer, "CREDIT_CARD", random.uniform(20000, 150000), "IMPOSSIBLE_TRAVEL",
         latitude=loc["lat"], longitude=loc["lon"], city=loc["city"], country_name=loc["country"], is_foreign=True,
         ip_address=data_factory.random_ip(domestic=False), timestamp=t2,
-    )
+    ))
+    return [t for t in results if t]
 
 
-def scenario_velocity_burst(db: Session, scenario_label: str = "VELOCITY_FRAUD") -> None:
+def scenario_velocity_burst(db: Session, scenario_label: str = "VELOCITY_FRAUD", channels: list[str] | None = None) -> list:
     customer = _random_active_customer(db)
     if not customer:
-        return
+        return []
     count = random.randint(5, 8)
     timestamps = _sequence_timestamps(count, 3, 6)
+    channel_choices = channels or ["UPI", "ATM", "DEBIT_CARD"]
+    results = []
     for i in range(count):
-        _fire(
-            db, customer, random.choice(["UPI", "ATM", "DEBIT_CARD"]), random.uniform(5000, 40000), scenario_label,
+        results.append(_fire(
+            db, customer, random.choice(channel_choices), random.uniform(5000, 40000), scenario_label,
             timestamp=timestamps[i],
-        )
+        ))
+    return [t for t in results if t]
 
 
-def scenario_new_beneficiary(db: Session) -> None:
+def scenario_atm_cash_out(db: Session) -> list:
     customer = _random_active_customer(db)
     if not customer:
-        return
+        return []
+    count = random.randint(5, 7)
+    timestamps = _sequence_timestamps(count, 15, 45)
+    results = []
+    for i in range(count):
+        results.append(_fire(
+            db, customer, "ATM", random.uniform(10000, 25000), "ATM_CASH_OUT_ATTACK",
+            device_uid=data_factory.random_device_uid(), timestamp=timestamps[i],
+        ))
+    return [t for t in results if t]
+
+
+def scenario_new_beneficiary(db: Session) -> list:
+    customer = _random_active_customer(db)
+    if not customer:
+        return []
     ben = data_factory.generate_beneficiary()
     amount = random.uniform(25000, 180000)
-    _fire(db, customer, random.choice(["NEFT", "IMPS"]), amount, "NEW_BENEFICIARY",
+    txn = _fire(db, customer, random.choice(["NEFT", "IMPS"]), amount, "NEW_BENEFICIARY",
           beneficiary_name=ben["beneficiary_name"], beneficiary_is_new=True)
+    return [txn] if txn else []
 
 
-def scenario_blacklisted_merchant(db: Session) -> None:
+def scenario_blacklisted_merchant(db: Session) -> list:
     customer = _random_active_customer(db)
     if not customer:
-        return
+        return []
     merchant = db.query(Merchant).filter(Merchant.is_blacklisted.is_(True)).order_by(Merchant.id).first()
     if not merchant:
-        return
+        return []
     amount = random.uniform(5000, 90000)
-    _fire(db, customer, random.choice(["UPI", "DEBIT_CARD", "CREDIT_CARD"]), amount, "BLACKLISTED_MERCHANT",
+    txn = _fire(db, customer, random.choice(["UPI", "DEBIT_CARD", "CREDIT_CARD"]), amount, "BLACKLISTED_MERCHANT",
           merchant_name=merchant.name, merchant_is_blacklisted=True)
+    return [txn] if txn else []
 
 
-def scenario_blacklisted_ip(db: Session) -> None:
+def scenario_blacklisted_ip(db: Session) -> list:
     customer = _random_active_customer(db)
     if not customer:
-        return
+        return []
     blacklisted = db.query(Blacklist).filter(Blacklist.entity_type == "IP_ADDRESS").order_by(Blacklist.id).first()
     if not blacklisted:
-        return
+        return []
     amount = random.uniform(10000, 150000)
-    _fire(db, customer, random.choice(["UPI", "NEFT"]), amount, "BLACKLISTED_IP", ip_address=blacklisted.entity_value)
+    txn = _fire(db, customer, random.choice(["UPI", "NEFT"]), amount, "BLACKLISTED_IP", ip_address=blacklisted.entity_value)
+    return [txn] if txn else []
 
 
-def scenario_dormant_account_active(db: Session) -> None:
+def scenario_dormant_account_active(db: Session) -> list:
     customer = _random_active_customer(db, status="DORMANT")
     if not customer:
         customer = _random_active_customer(db)
         if not customer:
-            return
+            return []
         customer.status = "DORMANT"
         customer.last_activity_at = utcnow() - timedelta(days=random.randint(120, 400))
     amount = random.uniform(40000, 300000)
-    _fire(db, customer, random.choice(["NEFT", "RTGS"]), amount, "DORMANT_ACCOUNT_ACTIVE")
+    txn = _fire(db, customer, random.choice(["NEFT", "RTGS"]), amount, "DORMANT_ACCOUNT_ACTIVE")
+    return [txn] if txn else []
 
 
-def scenario_repeated_failed_login(db: Session) -> None:
+def scenario_repeated_failed_login(db: Session) -> list:
     customer = _random_active_customer(db)
     if not customer:
-        return
+        return []
     amount = random.uniform(15000, 100000)
-    _fire(db, customer, random.choice(["UPI", "DEBIT_CARD"]), amount, "REPEATED_FAILED_LOGIN",
+    txn = _fire(db, customer, random.choice(["UPI", "DEBIT_CARD"]), amount, "REPEATED_FAILED_LOGIN",
           device_uid=data_factory.random_device_uid(), failed_login_attempts=random.randint(3, 7))
+    return [txn] if txn else []
 
 
-def scenario_multiple_cards_same_ip(db: Session) -> None:
+def scenario_multiple_cards_same_ip(db: Session) -> list:
     ip = data_factory.random_ip(domestic=True)
     count = random.randint(3, 5)
     timestamps = _sequence_timestamps(count, 10, 40)
+    results = []
     for i in range(count):
         customer = _random_active_customer(db)
         if not customer:
             continue
-        _fire(
+        results.append(_fire(
             db, customer, random.choice(["DEBIT_CARD", "CREDIT_CARD"]), random.uniform(5000, 60000),
             "MULTIPLE_CARDS_SAME_IP", ip_address=ip, timestamp=timestamps[i],
-        )
+        ))
+    return [t for t in results if t]
 
 
-def scenario_money_mule(db: Session) -> None:
+def scenario_money_mule(db: Session) -> list:
     customer = _random_active_customer(db)
     if not customer:
-        return
+        return []
     count = random.randint(3, 4)
     timestamps = _sequence_timestamps(count, 120, 360)
+    results = []
     for i in range(count):
         ben = data_factory.generate_beneficiary()
-        _fire(
+        results.append(_fire(
             db, customer, random.choice(["IMPS", "NEFT"]), random.uniform(40000, 95000), "MONEY_MULE",
             beneficiary_name=ben["beneficiary_name"], beneficiary_is_new=True,
             timestamp=timestamps[i],
-        )
+        ))
+    return [t for t in results if t]
 
 
-def scenario_account_takeover(db: Session) -> None:
+def scenario_account_takeover(db: Session) -> list:
     customer = _random_active_customer(db)
     if not customer:
-        return
+        return []
     loc = random.choice(FOREIGN_HIGH_RISK_LOCATIONS)
     ben = data_factory.generate_beneficiary()
     amount = random.uniform(50000, 400000)
-    _fire(
+    txn = _fire(
         db, customer, random.choice(["NEFT", "RTGS"]), amount, "ACCOUNT_TAKEOVER",
         device_uid=data_factory.random_device_uid(), latitude=loc["lat"], longitude=loc["lon"], city=loc["city"],
         country_name=loc["country"], is_foreign=True, ip_address=data_factory.random_ip(domestic=False),
         beneficiary_name=ben["beneficiary_name"], beneficiary_is_new=True,
     )
+    return [txn] if txn else []
 
 
-def scenario_round_number_laundering(db: Session) -> None:
+def scenario_round_number_laundering(db: Session) -> list:
     customer = _random_active_customer(db)
     if not customer:
-        return
+        return []
     amount = float(random.choice([100000, 200000, 250000, 500000, 1000000]))
-    _fire(db, customer, random.choice(["NEFT", "RTGS"]), amount, "ROUND_NUMBER_LAUNDERING")
+    txn = _fire(db, customer, random.choice(["NEFT", "RTGS"]), amount, "ROUND_NUMBER_LAUNDERING")
+    return [txn] if txn else []
 
 
-def scenario_structuring(db: Session) -> None:
+def scenario_structuring(db: Session) -> list:
     customer = _random_active_customer(db)
     if not customer:
-        return
+        return []
     count = random.randint(3, 4)
     timestamps = _sequence_timestamps(count, 300, 900)
+    results = []
     for i in range(count):
         amount = random.uniform(82000, 98000)
-        _fire(
+        results.append(_fire(
             db, customer, random.choice(["NEFT", "IMPS"]), amount, "STRUCTURING",
             timestamp=timestamps[i],
-        )
+        ))
+    return [t for t in results if t]
 
 
-def scenario_transaction_splitting(db: Session) -> None:
+def scenario_transaction_splitting(db: Session) -> list:
     customer = _random_active_customer(db)
     if not customer or not customer.beneficiaries:
-        return
+        return []
     beneficiary = random.choice(customer.beneficiaries)
     count = random.randint(3, 5)
     timestamps = _sequence_timestamps(count, 180, 480)
+    results = []
     for i in range(count):
         amount = random.uniform(30000, 60000)
-        _fire(
+        results.append(_fire(
             db, customer, "IMPS", amount, "TRANSACTION_SPLITTING",
             beneficiary_name=beneficiary.beneficiary_name,
             timestamp=timestamps[i],
-        )
+        ))
+    return [t for t in results if t]
 
 
 SCENARIOS = [
@@ -337,7 +376,71 @@ SCENARIOS = [
 ]
 
 
-def inject_random_fraud_scenario(db: Session) -> None:
+def inject_random_fraud_scenario(db: Session) -> list:
     scenario_fn = random.choice(SCENARIOS)
     logger.info("Injecting fraud scenario: %s", getattr(scenario_fn, "__name__", "velocity_burst_variant"))
-    scenario_fn(db)
+    return scenario_fn(db)
+
+
+# Presenter-facing demo scenarios — one-click triggers for the Transaction Simulator.
+# Each maps a stable code to a friendly label/description and the generator function.
+DEMO_SCENARIOS: dict[str, dict] = {
+    "HIGH_VALUE_UPI_FRAUD": {
+        "label": "High-Value UPI Fraud",
+        "description": "A single large-value transfer far above the customer's normal spend.",
+        "run": scenario_large_transaction,
+    },
+    "ACCOUNT_TAKEOVER": {
+        "label": "Account Takeover",
+        "description": "New device, foreign IP and a brand-new beneficiary appear together.",
+        "run": scenario_account_takeover,
+    },
+    "IMPOSSIBLE_TRAVEL": {
+        "label": "Impossible Travel",
+        "description": "Two transactions at physically unreachable locations minutes apart.",
+        "run": scenario_impossible_travel,
+    },
+    "NEW_DEVICE_LOGIN": {
+        "label": "New Device Login",
+        "description": "A payment initiated from a device never associated with this customer.",
+        "run": scenario_new_device,
+    },
+    "CARD_SKIMMING": {
+        "label": "Card Skimming",
+        "description": "Multiple customer cards used from the same compromised IP address.",
+        "run": scenario_multiple_cards_same_ip,
+    },
+    "ATM_CASH_OUT": {
+        "label": "ATM Cash-Out Attack",
+        "description": "A rapid burst of ATM withdrawals typical of a cloned-card cash-out.",
+        "run": scenario_atm_cash_out,
+    },
+    "MULE_ACCOUNT": {
+        "label": "Mule Account",
+        "description": "Funds fanned out to several brand-new beneficiaries in quick succession.",
+        "run": scenario_money_mule,
+    },
+    "STRUCTURING": {
+        "label": "Money Laundering (Structuring)",
+        "description": "Several transfers kept just under the regulatory reporting threshold.",
+        "run": scenario_structuring,
+    },
+    "VELOCITY_FRAUD": {
+        "label": "Velocity Fraud",
+        "description": "A rapid-fire burst of transactions in under a minute.",
+        "run": lambda db: scenario_velocity_burst(db, "VELOCITY_FRAUD"),
+    },
+    "MERCHANT_FRAUD": {
+        "label": "Merchant Fraud",
+        "description": "A payment routed to a merchant already on the fraud blacklist.",
+        "run": scenario_blacklisted_merchant,
+    },
+}
+
+
+def run_demo_scenario(db: Session, code: str) -> list:
+    entry = DEMO_SCENARIOS.get(code)
+    if entry is None:
+        raise ValueError(f"Unknown demo scenario: {code}")
+    logger.info("Demo-triggered fraud scenario: %s", code)
+    return entry["run"](db)

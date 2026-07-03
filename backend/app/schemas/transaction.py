@@ -3,6 +3,15 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 
+class RuleEvaluationOut(BaseModel):
+    code: str
+    name: str
+    category: str
+    weight: float
+    triggered: bool
+    detail: str
+
+
 class TransactionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -28,6 +37,8 @@ class TransactionOut(BaseModel):
     is_fraud: bool
     fraud_scenario: str | None = None
     triggered_rules: list[str] = []
+    rule_evaluations: list[RuleEvaluationOut] = []
+    processing_ms: float = 0
     reason: str
     timestamp: datetime
 

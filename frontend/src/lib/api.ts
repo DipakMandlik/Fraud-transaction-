@@ -7,6 +7,9 @@ import type {
   CustomerDetail,
   Customer,
   DashboardResponse,
+  DemoModeStatus,
+  DemoScenario,
+  DemoTriggerResponse,
   PaginatedResponse,
   Rule,
   Transaction,
@@ -117,8 +120,32 @@ export const alertsApi = {
     api.post<Alert>(`/alerts/${id}/notes`, { investigator, notes }).then((r) => r.data),
   close: (id: number, investigator: string, notes: string) =>
     api.post<Alert>(`/alerts/${id}/close`, { investigator, notes }).then((r) => r.data),
+  escalate: (id: number, investigator: string, notes: string) =>
+    api.post<Alert>(`/alerts/${id}/escalate`, { investigator, notes }).then((r) => r.data),
+  freezeAccount: (id: number, investigator: string, notes: string) =>
+    api.post<Alert>(`/alerts/${id}/freeze-account`, { investigator, notes }).then((r) => r.data),
+  requestVerification: (id: number, investigator: string, notes: string) =>
+    api.post<Alert>(`/alerts/${id}/request-verification`, { investigator, notes }).then((r) => r.data),
+  downloadReport: async (id: number, alertRef: string) => {
+    const response = await api.get(`/alerts/${id}/report`, { responseType: "blob" });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${alertRef}_report.txt`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };
 
 export const analyticsApi = {
   get: (hours = 24) => api.get<AnalyticsResponse>("/analytics", { params: { hours } }).then((r) => r.data),
+};
+
+export const demoApi = {
+  scenarios: () => api.get<DemoScenario[]>("/demo/scenarios").then((r) => r.data),
+  trigger: (code: string) => api.post<DemoTriggerResponse>(`/demo/trigger/${code}`).then((r) => r.data),
+  getMode: () => api.get<DemoModeStatus>("/demo/mode").then((r) => r.data),
+  setMode: (enabled: boolean) => api.post<DemoModeStatus>("/demo/mode", { enabled }).then((r) => r.data),
 };

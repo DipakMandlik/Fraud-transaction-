@@ -77,3 +77,22 @@ def close(db: Session, alert: FraudAlert, investigator: str, notes: str) -> Frau
     alert.status = "CLOSED"
     _record(db, alert, investigator, "CLOSE", notes or "Case closed")
     return _finish(db, alert)
+
+
+def escalate(db: Session, alert: FraudAlert, investigator: str, notes: str) -> FraudAlert:
+    alert.status = "INVESTIGATING"
+    if alert.severity != "CRITICAL":
+        alert.severity = "CRITICAL"
+    _record(db, alert, investigator, "ESCALATE", notes or "Escalated to senior fraud analyst")
+    return _finish(db, alert)
+
+
+def freeze_account(db: Session, alert: FraudAlert, investigator: str, notes: str) -> FraudAlert:
+    alert.transaction.customer.status = "SUSPENDED"
+    _record(db, alert, investigator, "FREEZE_ACCOUNT", notes or "Account frozen pending investigation (simulated)")
+    return _finish(db, alert)
+
+
+def request_verification(db: Session, alert: FraudAlert, investigator: str, notes: str) -> FraudAlert:
+    _record(db, alert, investigator, "REQUEST_VERIFICATION", notes or "Customer verification requested (simulated)")
+    return _finish(db, alert)

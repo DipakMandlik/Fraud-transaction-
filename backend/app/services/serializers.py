@@ -28,6 +28,8 @@ def transaction_to_dict(txn: Transaction) -> dict:
         "is_fraud": txn.is_fraud,
         "fraud_scenario": txn.fraud_scenario,
         "triggered_rules": txn.triggered_rules.get("rules", []) if txn.triggered_rules else [],
+        "rule_evaluations": txn.rule_evaluations or [],
+        "processing_ms": txn.processing_ms,
         "reason": txn.reason,
         "timestamp": txn.timestamp.isoformat(),
     }

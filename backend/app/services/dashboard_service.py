@@ -1,14 +1,15 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from app.utils.time import utcnow
 
-from sqlalchemy import Integer, cast, func
+from sqlalchemy import Integer, cast, func, text
 from sqlalchemy.orm import Session
 
 from app.models.country import Country
 from app.models.transaction import Transaction
 from app.repositories.alert_repo import AlertRepository
 from app.repositories.transaction_repo import TransactionRepository
-from app.schemas.dashboard import ChannelDistribution, DashboardResponse, GeoPoint, KpiSummary, TrendPoint
+from app.schemas.dashboard import ChannelDistribution, DashboardResponse, GeoPoint, KpiSummary, SystemHealth, TrendPoint
+from app.services.event_bus import get_sync_redis
 
 _txn_repo = TransactionRepository()
 _alert_repo = AlertRepository()
@@ -37,6 +38,10 @@ def get_kpis(db: Session) -> KpiSummary:
     avg_risk_score = _txn_repo.average_risk_score(db, today_start)
     prevented_amount = _txn_repo.prevented_fraud_amount(db, today_start)
 
+    avg_processing_ms = (
+        db.query(func.avg(Transaction.processing_ms)).filter(Transaction.timestamp >= today_start).scalar()
+    )
+
     return KpiSummary(
         transactions_today=transactions_today,
         transactions_per_minute=round(txns_last_5_min / 5, 1),
@@ -47,7 +52,24 @@ def get_kpis(db: Session) -> KpiSummary:
         high_risk_accounts=high_risk_accounts,
         fraud_percentage=fraud_percentage,
         average_risk_score=avg_risk_score,
+        average_detection_time_ms=round(float(avg_processing_ms or 0), 2),
+        system_health=get_system_health(db),
     )
+
+
+def get_system_health(db: Session) -> SystemHealth:
+    db_ok = True
+    redis_ok = True
+    try:
+        db.execute(text("SELECT 1"))
+    except Exception:
+        db_ok = False
+    try:
+        get_sync_redis().ping()
+    except Exception:
+        redis_ok = False
+
+    return SystemHealth(database=db_ok, redis=redis_ok, rule_engine=True, risk_engine=True, streaming=redis_ok)
 
 
 def get_trend(db: Session, hours: int = 24) -> list[TrendPoint]:

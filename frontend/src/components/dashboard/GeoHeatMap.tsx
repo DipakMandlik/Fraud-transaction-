@@ -1,12 +1,16 @@
+import { useEffect, useRef, useState } from "react";
+
 import { Globe2 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import type { GeoPoint } from "@/types";
+import { useNotifications } from "@/hooks/useNotifications";
+import type { GeoPoint, Transaction } from "@/types";
 import { formatNumber } from "@/lib/utils";
 
 const LON_RANGE: [number, number] = [-20, 145];
 const LAT_RANGE: [number, number] = [-5, 60];
+const PING_LIFETIME_MS = 2600;
 
 function project(lat: number, lon: number) {
   const x = ((lon - LON_RANGE[0]) / (LON_RANGE[1] - LON_RANGE[0])) * 100;
@@ -20,15 +24,41 @@ function riskColor(score: number): string {
   return "#2563EB";
 }
 
+interface FraudPing {
+  id: number;
+  x: number;
+  y: number;
+}
+
 export function GeoHeatMap({ data }: { data: GeoPoint[] }) {
+  const { onTransaction } = useNotifications();
+  const [pings, setPings] = useState<FraudPing[]>([]);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const maxCount = Math.max(1, ...data.map((d) => d.count));
+
+  useEffect(() => {
+    const unsubscribe = onTransaction((incoming) => {
+      const txn = incoming as Transaction;
+      if (!txn.is_fraud) return;
+      const { x, y } = project(txn.latitude, txn.longitude);
+      setPings((prev) => [...prev, { id: txn.id, x, y }]);
+      const timer = setTimeout(() => {
+        setPings((prev) => prev.filter((p) => p.id !== txn.id));
+      }, PING_LIFETIME_MS);
+      timersRef.current.push(timer);
+    });
+    return () => {
+      unsubscribe();
+      timersRef.current.forEach(clearTimeout);
+    };
+  }, [onTransaction]);
 
   return (
     <Card>
       <CardHeader>
         <div>
           <CardTitle>Geographic Transaction Heat Map</CardTitle>
-          <CardDescription>Bubble size = volume &middot; Color = average risk</CardDescription>
+          <CardDescription>Bubble size = volume &middot; Color = average risk &middot; Pulses = new fraud</CardDescription>
         </div>
       </CardHeader>
       <CardContent>
@@ -66,6 +96,12 @@ export function GeoHeatMap({ data }: { data: GeoPoint[] }) {
                   </g>
                 );
               })}
+              {pings.map((ping) => (
+                <g key={ping.id}>
+                  <circle cx={ping.x} cy={ping.y * 0.56} r={1.2} fill="#DC2626" className="animate-ping" style={{ transformOrigin: `${ping.x}px ${ping.y * 0.56}px` }} />
+                  <circle cx={ping.x} cy={ping.y * 0.56} r={1.4} fill="none" stroke="#DC2626" strokeWidth={0.4} opacity={0.7} />
+                </g>
+              ))}
             </svg>
           </div>
         )}

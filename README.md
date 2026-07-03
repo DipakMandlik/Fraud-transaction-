@@ -186,15 +186,36 @@ before for this customer; Total Risk Score 92."*
 
 ## 4. Application modules
 
-- **Dashboard** — live KPIs, transaction/fraud trend, channel distribution,
-  simulated geographic heat map, live transaction feed, live alert feed.
+- **Dashboard** — a Command Center bar (live monitoring indicator, money
+  protected today, average detection time, throughput, system health) sits
+  above every page; below it live KPIs, transaction/fraud trend, channel
+  distribution, an animated geographic heat map, a SOC-style Mission Control
+  feed, and the live alert feed.
+- **Transaction Simulator** — the flagship screen. Watch one payment travel
+  through an 11-stage pipeline (Customer Mobile → API Gateway → ... → Core
+  Banking → Completed) with each stage lighting up and reporting latency; a
+  live rule-execution checklist reveals every rule's real pass/fail verdict
+  as it runs; an animated risk gauge counts up to the real score with
+  color transitions; and if the transaction is blocked, the pipeline halts at
+  the Decision Engine and a full **Payment Intercepted** sequence plays —
+  amount protected, settlement cancelled, a simulated customer push
+  notification, then the alert/case-creation checklist. One-click **demo
+  scenario** buttons trigger any of 10 named fraud typologies on demand, a
+  **Watch Live Feed** toggle auto-plays real transactions as they arrive over
+  the WebSocket, and **Replay Incident** (from any alert) re-runs a past
+  transaction's exact recorded journey.
 - **Transaction Explorer** — search by customer/ref/merchant/IP, filter by
   status/channel/fraud flag, paginate, export CSV.
 - **Customer 360** — profile, risk segment, accounts, known devices,
   beneficiaries, transaction history, fraud incident count.
 - **Fraud Alert Center** — investigation queue with severity/status filters;
-  assign, investigate, approve, block, mark-safe, and note actions, each
-  logged to an audit-ready investigation timeline.
+  assign, investigate, approve, block, mark-safe, escalate, freeze-account
+  (simulated), request-verification (simulated), and note actions, each
+  logged to a chronological investigation timeline. Alert detail also shows
+  a **Customer Behaviour Comparison** (normal vs. current: location, amount,
+  device, beneficiary, time of day) and a **Risk Score Breakdown** bar chart
+  of every contributing rule, plus a one-click downloadable investigation
+  report.
 - **Analytics** — hourly fraud volume, risk distribution, channel/country
   distribution, fraud reason breakdown, top risk customers, approval/blocked/
   false-positive rates.
@@ -202,12 +223,20 @@ before for this customer; Total Risk Score 92."*
 - **Live notifications** — toast pop-ups, a bell with unread count, and a
   short audio chime fire the instant a new fraud alert is created over the
   WebSocket channel — no polling, no page refresh.
+- **Demo Mode** — a one-click toggle (Transaction Simulator or Settings) that
+  tightens the fraud-injection cadence to every 20–30 seconds and slows
+  presentation animations for a live-audience pace, without touching the
+  underlying detection logic.
 
 ## 5. Screenshots
 
 | Dashboard | Fraud Alert Center |
 |---|---|
 | ![Dashboard](docs/screenshots/dashboard.png) | ![Fraud Alert Center](docs/screenshots/fraud-alert-center.png) |
+
+| Transaction Simulator | Payment Interception |
+|---|---|
+| ![Transaction Simulator](docs/screenshots/simulator.png) | ![Payment Interception](docs/screenshots/simulator-interception.png) |
 
 ## 6. Fraud rule catalog
 
@@ -270,7 +299,16 @@ All values below live in `backend/.env` (copy from `backend/.env.example`):
 
 Full interactive documentation at `/docs` (Swagger) once the backend is
 running — routers exist for auth, dashboard, transactions, customers, rules,
-alerts, investigations, analytics, settings, and health.
+alerts, investigations, analytics, settings, demo, and health.
+
+The **demo** router powers the Transaction Simulator's presenter controls:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/demo/scenarios` | List the 10 named one-click fraud scenarios |
+| `POST /api/demo/trigger/{code}` | Run a scenario immediately and return the resulting transaction(s), including the full per-rule pass/fail evaluation used by the live rule panel |
+| `GET /api/demo/mode` / `POST /api/demo/mode` | Read or toggle presentation-pace Demo Mode (20–30s fraud cadence) |
+| `GET /api/alerts/{id}/report` | Download a plain-text investigation report |
 
 ## 11. Project structure
 

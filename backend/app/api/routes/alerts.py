@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.database import get_db
-from app.models.user import User
 from app.repositories.alert_repo import AlertRepository
 from app.schemas.alert import (
     AlertActionRequest,
@@ -15,6 +15,7 @@ from app.schemas.alert import (
 )
 from app.schemas.transaction import TransactionOut
 from app.services import alert_service
+from app.services.report_service import build_investigation_report
 from app.services.serializers import transaction_to_dict
 
 router = APIRouter(prefix="/api/alerts", tags=["Fraud Alerts"], dependencies=[Depends(get_current_user)])
@@ -101,3 +102,31 @@ def add_note(alert_id: int, payload: AlertActionRequest, db: Session = Depends(g
 def close_alert(alert_id: int, payload: AlertActionRequest, db: Session = Depends(get_db)) -> AlertOut:
     alert = alert_service.close(db, _get_or_404(db, alert_id), payload.investigator, payload.notes)
     return _alert_to_out(alert)
+
+
+@router.post("/{alert_id}/escalate", response_model=AlertOut)
+def escalate_alert(alert_id: int, payload: AlertActionRequest, db: Session = Depends(get_db)) -> AlertOut:
+    alert = alert_service.escalate(db, _get_or_404(db, alert_id), payload.investigator, payload.notes)
+    return _alert_to_out(alert)
+
+
+@router.post("/{alert_id}/freeze-account", response_model=AlertOut)
+def freeze_account_alert(alert_id: int, payload: AlertActionRequest, db: Session = Depends(get_db)) -> AlertOut:
+    alert = alert_service.freeze_account(db, _get_or_404(db, alert_id), payload.investigator, payload.notes)
+    return _alert_to_out(alert)
+
+
+@router.post("/{alert_id}/request-verification", response_model=AlertOut)
+def request_verification_alert(alert_id: int, payload: AlertActionRequest, db: Session = Depends(get_db)) -> AlertOut:
+    alert = alert_service.request_verification(db, _get_or_404(db, alert_id), payload.investigator, payload.notes)
+    return _alert_to_out(alert)
+
+
+@router.get("/{alert_id}/report", response_class=PlainTextResponse)
+def get_investigation_report(alert_id: int, db: Session = Depends(get_db)) -> PlainTextResponse:
+    alert = _get_or_404(db, alert_id)
+    report = build_investigation_report(alert)
+    return PlainTextResponse(
+        report,
+        headers={"Content-Disposition": f"attachment; filename={alert.alert_ref}_report.txt"},
+    )

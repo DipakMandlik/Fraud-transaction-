@@ -1,6 +1,14 @@
 from pydantic import BaseModel
 
 
+class SystemHealth(BaseModel):
+    database: bool
+    redis: bool
+    rule_engine: bool
+    risk_engine: bool
+    streaming: bool
+
+
 class KpiSummary(BaseModel):
     transactions_today: int
     transactions_per_minute: float
@@ -11,6 +19,8 @@ class KpiSummary(BaseModel):
     high_risk_accounts: int
     fraud_percentage: float
     average_risk_score: float
+    average_detection_time_ms: float
+    system_health: SystemHealth
 
 
 class TrendPoint(BaseModel):

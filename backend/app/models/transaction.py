@@ -39,6 +39,8 @@ class Transaction(Base):
     is_fraud: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     fraud_scenario: Mapped[str | None] = mapped_column(String(60), nullable=True)
     triggered_rules: Mapped[dict] = mapped_column(JSON, default=dict)
+    rule_evaluations: Mapped[list] = mapped_column(JSON, default=list)
+    processing_ms: Mapped[float] = mapped_column(Float, default=0)
     reason: Mapped[str] = mapped_column(Text, default="")
 
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True, server_default="now()")

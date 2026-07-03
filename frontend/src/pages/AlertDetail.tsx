@@ -1,8 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Ban, CheckCircle2, MessageSquare, ShieldCheck, UserPlus } from "lucide-react";
+import {
+  ArrowLeft,
+  Ban,
+  CheckCircle2,
+  FileDown,
+  MessageSquare,
+  PlayCircle,
+  ShieldCheck,
+  Snowflake,
+  TrendingUp,
+  UserPlus,
+} from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { BehaviorComparison } from "@/components/alerts/BehaviorComparison";
+import { InvestigationTimeline } from "@/components/alerts/InvestigationTimeline";
+import { RiskBreakdown } from "@/components/alerts/RiskBreakdown";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Badge, alertStatusTone, riskTone, severityTone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -10,13 +24,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Dialog } from "@/components/ui/Dialog";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/hooks/useAuth";
-import { alertsApi } from "@/lib/api";
+import { alertsApi, customersApi } from "@/lib/api";
 import { cn, formatCurrency, formatDateTime, titleCase } from "@/lib/utils";
 import type { AlertDetail as AlertDetailType } from "@/types";
 
-type ActionKind = "investigate" | "approve" | "block" | "mark-safe" | "note" | null;
+type ActionKind =
+  | "investigate"
+  | "approve"
+  | "block"
+  | "mark-safe"
+  | "note"
+  | "escalate"
+  | "freeze-account"
+  | "request-verification"
+  | null;
 
-const ACTION_CONFIG: Record<Exclude<ActionKind, null>, { title: string; description: string; confirmLabel: string; variant: "primary" | "success" | "danger" | "secondary" }> = {
+const ACTION_CONFIG: Record<
+  Exclude<ActionKind, null>,
+  { title: string; description: string; confirmLabel: string; variant: "primary" | "success" | "danger" | "secondary" }
+> = {
   investigate: {
     title: "Start Investigation",
     description: "Move this alert into active investigation and leave a note.",
@@ -47,6 +73,24 @@ const ACTION_CONFIG: Record<Exclude<ActionKind, null>, { title: string; descript
     confirmLabel: "Add Note",
     variant: "primary",
   },
+  escalate: {
+    title: "Escalate to Senior Analyst",
+    description: "Raise this case to critical severity and hand it to the senior fraud team.",
+    confirmLabel: "Escalate Case",
+    variant: "danger",
+  },
+  "freeze-account": {
+    title: "Freeze Customer Account (Simulated)",
+    description: "Suspends the customer's account pending investigation. This is a demo simulation.",
+    confirmLabel: "Freeze Account",
+    variant: "danger",
+  },
+  "request-verification": {
+    title: "Request Customer Verification (Simulated)",
+    description: "Sends a verification request to the customer to confirm the transaction. This is a demo simulation.",
+    confirmLabel: "Request Verification",
+    variant: "primary",
+  },
 };
 
 export default function AlertDetail() {
@@ -63,6 +107,12 @@ export default function AlertDetail() {
     queryKey: ["alert", alertId],
     queryFn: () => alertsApi.get(alertId),
     enabled: !!alertId,
+  });
+
+  const customerQuery = useQuery({
+    queryKey: ["customer", query.data?.customer_id],
+    queryFn: () => customersApi.get(query.data!.customer_id),
+    enabled: !!query.data,
   });
 
   const investigator = user?.full_name ?? "Investigator";
@@ -85,6 +135,12 @@ export default function AlertDetail() {
           return alertsApi.markSafe(alertId, investigator, notes);
         case "note":
           return alertsApi.addNote(alertId, investigator, notes);
+        case "escalate":
+          return alertsApi.escalate(alertId, investigator, notes);
+        case "freeze-account":
+          return alertsApi.freezeAccount(alertId, investigator, notes);
+        case "request-verification":
+          return alertsApi.requestVerification(alertId, investigator, notes);
       }
     },
     onSuccess: () => {
@@ -107,9 +163,14 @@ export default function AlertDetail() {
 
   return (
     <AppLayout title={alert.alert_ref} subtitle={`Fraud alert for ${alert.customer_name}`}>
-      <Button variant="ghost" size="sm" className="mb-4" onClick={() => navigate(-1)}>
-        <ArrowLeft className="h-4 w-4" /> Back
-      </Button>
+      <div className="mb-4 flex items-center justify-between">
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-4 w-4" /> Back
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => navigate(`/simulator?replay=${alert.transaction_id}`)}>
+          <PlayCircle className="h-4 w-4" /> Replay Incident
+        </Button>
+      </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
@@ -142,6 +203,30 @@ export default function AlertDetail() {
 
           <Card>
             <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-fraud" /> Customer Behaviour Comparison
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {customerQuery.data ? (
+                <BehaviorComparison customer={customerQuery.data} alert={alert} />
+              ) : (
+                <Skeleton className="h-40 w-full" />
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Risk Score Breakdown</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RiskBreakdown transaction={alert.transaction} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Linked Transaction</CardTitle>
             </CardHeader>
             <CardContent>
@@ -169,22 +254,7 @@ export default function AlertDetail() {
               <CardTitle>Investigation Timeline</CardTitle>
             </CardHeader>
             <CardContent>
-              {alert.investigations.length === 0 ? (
-                <p className="text-sm text-slate-400">No investigation activity yet.</p>
-              ) : (
-                <ol className="relative space-y-5 border-l border-slate-200 pl-5">
-                  {alert.investigations.map((inv) => (
-                    <li key={inv.id} className="relative">
-                      <span className="absolute -left-[26px] top-1 h-3 w-3 rounded-full border-2 border-white bg-primary" />
-                      <p className="text-sm font-medium text-slate-800">
-                        {titleCase(inv.action)} <span className="font-normal text-slate-400">by {inv.investigator}</span>
-                      </p>
-                      {inv.notes && <p className="mt-0.5 text-sm text-slate-600">{inv.notes}</p>}
-                      <p className="mt-0.5 text-xs text-slate-400">{formatDateTime(inv.created_at)}</p>
-                    </li>
-                  ))}
-                </ol>
-              )}
+              <InvestigationTimeline alert={alert} />
             </CardContent>
           </Card>
         </div>
@@ -239,8 +309,40 @@ export default function AlertDetail() {
               >
                 <ShieldCheck className="h-4 w-4" /> Mark as False Positive
               </Button>
+
+              <div className="my-2 border-t border-slate-100" />
+
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                disabled={isClosed}
+                onClick={() => setActiveAction("escalate")}
+              >
+                <TrendingUp className="h-4 w-4" /> Escalate
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                disabled={isClosed}
+                onClick={() => setActiveAction("freeze-account")}
+              >
+                <Snowflake className="h-4 w-4" /> Freeze Account
+              </Button>
+              <Button variant="ghost" className="w-full justify-start" onClick={() => setActiveAction("request-verification")}>
+                <MessageSquare className="h-4 w-4" /> Request Verification
+              </Button>
               <Button variant="ghost" className="w-full justify-start" onClick={() => setActiveAction("note")}>
                 <MessageSquare className="h-4 w-4" /> Add Note
+              </Button>
+
+              <div className="my-2 border-t border-slate-100" />
+
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => alertsApi.downloadReport(alert.id, alert.alert_ref)}
+              >
+                <FileDown className="h-4 w-4" /> Generate Investigation Report
               </Button>
             </CardContent>
           </Card>

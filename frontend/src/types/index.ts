@@ -1,3 +1,12 @@
+export interface RuleEvaluation {
+  code: string;
+  name: string;
+  category: string;
+  weight: number;
+  triggered: boolean;
+  detail: string;
+}
+
 export interface Transaction {
   id: number;
   transaction_ref: string;
@@ -21,6 +30,8 @@ export interface Transaction {
   is_fraud: boolean;
   fraud_scenario: string | null;
   triggered_rules: string[];
+  rule_evaluations: RuleEvaluation[];
+  processing_ms: number;
   reason: string;
   timestamp: string;
 }
@@ -30,6 +41,14 @@ export interface PaginatedResponse<T> {
   total: number;
   page: number;
   page_size: number;
+}
+
+export interface SystemHealth {
+  database: boolean;
+  redis: boolean;
+  rule_engine: boolean;
+  risk_engine: boolean;
+  streaming: boolean;
 }
 
 export interface KpiSummary {
@@ -42,6 +61,8 @@ export interface KpiSummary {
   high_risk_accounts: number;
   fraud_percentage: number;
   average_risk_score: number;
+  average_detection_time_ms: number;
+  system_health: SystemHealth;
 }
 
 export interface TrendPoint {
@@ -205,3 +226,35 @@ export interface WsEvent {
   type: "transaction.created" | "alert.created" | "alert.updated";
   payload: Transaction | Alert;
 }
+
+export interface DemoScenario {
+  code: string;
+  label: string;
+  description: string;
+}
+
+export interface DemoTriggerResponse {
+  scenario_code: string;
+  transactions: Transaction[];
+  primary_transaction_id: number | null;
+}
+
+export interface DemoModeStatus {
+  demo_mode: boolean;
+  fraud_injection_min_seconds: number;
+  fraud_injection_max_seconds: number;
+}
+
+export const PIPELINE_STAGES = [
+  "Customer Mobile",
+  "API Gateway",
+  "Transaction Validation",
+  "Customer Profile",
+  "Device Intelligence",
+  "Rule Engine",
+  "Behavior Engine",
+  "Risk Engine",
+  "Decision Engine",
+  "Core Banking",
+  "Completed",
+] as const;
