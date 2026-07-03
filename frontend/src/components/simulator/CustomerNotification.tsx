@@ -11,7 +11,7 @@ export function CustomerNotification({ transaction }: { transaction: Transaction
         <span className="flex h-5 w-5 items-center justify-center rounded bg-primary text-white">
           <ShieldAlert className="h-3 w-3" />
         </span>
-        Bank Security Alert &middot; now &middot; simulated
+        Bank Security Alert &middot; now &middot; preview
       </div>
       <p className="text-sm leading-relaxed text-slate-700">
         A transaction of <span className="font-bold text-slate-900">{formatCurrency(transaction.amount, transaction.currency)}</span>{" "}

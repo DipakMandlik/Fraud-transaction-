@@ -89,10 +89,10 @@ def escalate(db: Session, alert: FraudAlert, investigator: str, notes: str) -> F
 
 def freeze_account(db: Session, alert: FraudAlert, investigator: str, notes: str) -> FraudAlert:
     alert.transaction.customer.status = "SUSPENDED"
-    _record(db, alert, investigator, "FREEZE_ACCOUNT", notes or "Account frozen pending investigation (simulated)")
+    _record(db, alert, investigator, "FREEZE_ACCOUNT", notes or "Account frozen pending investigation")
     return _finish(db, alert)
 
 
 def request_verification(db: Session, alert: FraudAlert, investigator: str, notes: str) -> FraudAlert:
-    _record(db, alert, investigator, "REQUEST_VERIFICATION", notes or "Customer verification requested (simulated)")
+    _record(db, alert, investigator, "REQUEST_VERIFICATION", notes or "Customer verification requested")
     return _finish(db, alert)

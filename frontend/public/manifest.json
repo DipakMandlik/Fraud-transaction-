@@ -1,0 +1,12 @@
+{
+  "name": "PiBy3 Fraud Intelligence Platform",
+  "short_name": "PiBy3 FIP",
+  "description": "Enterprise real-time fraud detection and investigation platform by PiBy3.",
+  "icons": [
+    { "src": "/pibythree-logo.jpg", "sizes": "571x366", "type": "image/jpeg" }
+  ],
+  "theme_color": "#2563EB",
+  "background_color": "#F8FAFC",
+  "display": "standalone",
+  "start_url": "/"
+}

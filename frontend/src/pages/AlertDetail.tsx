@@ -41,7 +41,7 @@ type ActionKind =
 
 const ACTION_CONFIG: Record<
   Exclude<ActionKind, null>,
-  { title: string; description: string; confirmLabel: string; variant: "primary" | "success" | "danger" | "secondary" }
+  { title: string; description: string; confirmLabel: string; variant: "primary" | "success" | "danger" | "secondary" | "warning" }
 > = {
   investigate: {
     title: "Start Investigation",
@@ -77,17 +77,17 @@ const ACTION_CONFIG: Record<
     title: "Escalate to Senior Analyst",
     description: "Raise this case to critical severity and hand it to the senior fraud team.",
     confirmLabel: "Escalate Case",
-    variant: "danger",
+    variant: "warning",
   },
   "freeze-account": {
-    title: "Freeze Customer Account (Simulated)",
-    description: "Suspends the customer's account pending investigation. This is a demo simulation.",
+    title: "Freeze Customer Account",
+    description: "Suspends the customer's account pending investigation.",
     confirmLabel: "Freeze Account",
     variant: "danger",
   },
   "request-verification": {
-    title: "Request Customer Verification (Simulated)",
-    description: "Sends a verification request to the customer to confirm the transaction. This is a demo simulation.",
+    title: "Request Customer Verification",
+    description: "Sends a verification request to the customer to confirm the transaction.",
     confirmLabel: "Request Verification",
     variant: "primary",
   },
@@ -313,7 +313,7 @@ export default function AlertDetail() {
               <div className="my-2 border-t border-slate-100" />
 
               <Button
-                variant="outline"
+                variant="warning"
                 className="w-full justify-start"
                 disabled={isClosed}
                 onClick={() => setActiveAction("escalate")}

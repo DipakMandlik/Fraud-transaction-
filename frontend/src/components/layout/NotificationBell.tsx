@@ -14,7 +14,10 @@ export function NotificationBell() {
   return (
     <div className="relative">
       <button
-        className="relative flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+        className="relative flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
+        aria-haspopup="true"
+        aria-expanded={open}
         onClick={() => {
           setOpen((prev) => !prev);
           if (!open) markAllRead();

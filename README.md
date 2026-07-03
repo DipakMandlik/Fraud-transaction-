@@ -1,4 +1,4 @@
-# Sentinel — Real-Time Fraud Detection Platform
+# PiBy3 Fraud Intelligence Platform
 
 A production-style demonstration of a Tier-1 bank's real-time fraud monitoring
 system: a continuous transaction stream, a configurable rule + risk scoring

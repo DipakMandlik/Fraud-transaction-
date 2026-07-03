@@ -197,7 +197,7 @@ export default function TransactionSimulator() {
           </Button>
           <Button variant={demoMode ? "success" : "outline"} size="sm" onClick={toggleDemoMode}>
             <Sparkles className="h-4 w-4" />
-            Demo Mode: {demoMode ? "On (20-30s cadence)" : "Off"}
+            Presentation Mode: {demoMode ? "On (20-30s cadence)" : "Off"}
           </Button>
         </div>
         {txn && (
@@ -211,7 +211,7 @@ export default function TransactionSimulator() {
         <div className="space-y-6 xl:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>One-Click Fraud Scenarios</CardTitle>
+              <CardTitle>Incident Library</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -248,8 +248,8 @@ export default function TransactionSimulator() {
             <CardContent>
               {!txn ? (
                 <p className="py-16 text-center text-sm text-slate-400">
-                  Trigger a scenario above, or enable "Watch Live Feed" to see the next real transaction travel through
-                  the pipeline.
+                  Select an incident from the library above, or enable "Watch Live Feed" to see the next real
+                  transaction travel through the pipeline.
                 </p>
               ) : (
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">

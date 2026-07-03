@@ -2,7 +2,7 @@ import { forwardRef, type ButtonHTMLAttributes } from "react";
 
 import { cn } from "@/lib/utils";
 
-type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "success";
+type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "success" | "warning";
 type Size = "sm" | "md" | "lg" | "icon";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -17,6 +17,7 @@ const variantClasses: Record<Variant, string> = {
   ghost: "text-slate-600 hover:bg-slate-100",
   danger: "bg-fraud text-white hover:bg-red-700 shadow-sm",
   success: "bg-success text-white hover:bg-green-700 shadow-sm",
+  warning: "bg-warning text-white hover:bg-orange-700 shadow-sm",
 };
 
 const sizeClasses: Record<Size, string> = {
@@ -31,7 +32,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     <button
       ref={ref}
       className={cn(
-        "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-colors",
+        "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-colors duration-150",
         "disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
         variantClasses[variant],
         sizeClasses[size],

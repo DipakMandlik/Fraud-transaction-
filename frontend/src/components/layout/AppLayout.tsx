@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { CommandCenterBar } from "@/components/layout/CommandCenterBar";
+import { Footer } from "@/components/layout/Footer";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { ToastStack } from "@/components/layout/ToastStack";
 import { Topbar } from "@/components/layout/Topbar";
@@ -19,6 +20,7 @@ export function AppLayout({ title, subtitle, children }: AppLayoutProps) {
         <CommandCenterBar />
         <Topbar title={title} subtitle={subtitle} />
         <main className="flex-1 overflow-y-auto px-6 py-6">{children}</main>
+        <Footer />
       </div>
       <ToastStack />
     </div>
