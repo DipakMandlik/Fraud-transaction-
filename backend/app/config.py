@@ -16,6 +16,13 @@ class Settings(BaseSettings):
     ADMIN_USERNAME: str = "admin"
     ADMIN_PASSWORD: str = "admin"
 
+    # Secondary demo analyst account. Seeded only when SEED_DEMO_ANALYST is true
+    # (kept on for local/demo convenience; turn OFF for any public deployment so
+    # the repo-visible default password is not a live login).
+    SEED_DEMO_ANALYST: bool = True
+    ANALYST_USERNAME: str = "analyst"
+    ANALYST_PASSWORD: str = "analyst123"
+
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
 
     TXN_MIN_INTERVAL_SECONDS: int = 2

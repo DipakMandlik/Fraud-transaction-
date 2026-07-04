@@ -35,6 +35,8 @@ services:
         sync: false # set a real password before this URL is public
       - key: CORS_ORIGINS
         sync: false # e.g. https://<your-github-username>.github.io
+      - key: SEED_DEMO_ANALYST
+        value: "false" # remove the repo-visible analyst/analyst123 demo login on a public deploy
       - key: TXN_MIN_INTERVAL_SECONDS
         value: "2"
       - key: TXN_MAX_INTERVAL_SECONDS

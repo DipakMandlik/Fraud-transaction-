@@ -196,7 +196,15 @@ GitHub Pages (static)              Render (free Web Service)         Neon (free 
   long-lived free demo instance healthy.
 - This is a single shared instance — every visitor sees and can act on the same data. That's expected for a
   demo, but is why rotating the admin credentials before sharing the URL matters more here than in a local or
-  Docker Compose deployment.
+  Docker Compose deployment. Setting `ADMIN_PASSWORD` (and optionally `ADMIN_USERNAME`) now takes effect on
+  **every** boot, including redeploys against an already-seeded database — the user account is re-synced on
+  startup, so a rotated password is applied immediately.
+- The repo ships a secondary demo analyst account (`analyst` / `analyst123`) whose credentials are visible in
+  the source. It is convenient for local demos but is a live login with the same effective access as admin
+  (the API does not yet enforce per-role restrictions). **For any public deployment, set
+  `SEED_DEMO_ANALYST=false`** — this removes the analyst account on the next boot (or set `ANALYST_PASSWORD` to
+  a strong value if you want to keep it). The Render Blueprint leaves this to you rather than shipping a known
+  public credential.
 
 ## Production considerations
 

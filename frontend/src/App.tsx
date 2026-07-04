@@ -23,6 +23,10 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       staleTime: 10_000,
+      // The axios interceptor already retries cold-start network failures with
+      // backoff; a second React Query retry layer on top would multiply that
+      // into minutes of hidden retrying, so keep it to a single extra attempt.
+      retry: 1,
     },
   },
 });

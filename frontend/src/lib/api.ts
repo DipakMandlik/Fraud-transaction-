@@ -31,28 +31,36 @@ api.interceptors.request.use((config) => {
 
 // The hosted demo backend runs on a free tier that can go to sleep after a
 // period of inactivity and take up to ~60s to wake on the next request. A
-// network-level failure (no HTTP response at all) is the signature of that
-// cold start rather than a real error, so retry silently with backoff before
-// surfacing anything to the UI.
+// network-level failure (no HTTP response) is the signature of that cold start,
+// so we retry with backoff before surfacing the error to the UI.
+//
+// Retries are restricted to safe, idempotent GET requests: re-sending a POST
+// (login, alert actions, demo triggers) after a lost/timed-out response would
+// duplicate server-side writes, so mutations fail fast to their own error UI.
 const MAX_WAKE_RETRIES = 6;
 const wakeListeners = new Set<(waking: boolean) => void>();
+
+// Ref-count of GETs currently sleeping between wake retries. The banner shows
+// while any request is retrying (0 -> 1) and hides only when the last one
+// settles (-> 0), so concurrent pollers can't flap it on and off.
+let wakingCount = 0;
 
 export function onBackendWaking(listener: (waking: boolean) => void): () => void {
   wakeListeners.add(listener);
   return () => wakeListeners.delete(listener);
 }
 
-function notifyWaking(waking: boolean) {
-  wakeListeners.forEach((listener) => listener(waking));
+function setWaking(delta: number) {
+  const was = wakingCount > 0;
+  wakingCount = Math.max(0, wakingCount + delta);
+  const now = wakingCount > 0;
+  if (was !== now) wakeListeners.forEach((listener) => listener(now));
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 api.interceptors.response.use(
-  (response) => {
-    notifyWaking(false);
-    return response;
-  },
+  (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem("auth_token");
@@ -65,15 +73,21 @@ api.interceptors.response.use(
     }
 
     const config = error.config;
+    const method = (config?.method ?? "get").toLowerCase();
     const isNetworkFailure = !error.response;
-    if (isNetworkFailure && config && (config.__wakeRetryCount ?? 0) < MAX_WAKE_RETRIES) {
+    const isRetriable = isNetworkFailure && method === "get" && config;
+
+    if (isRetriable && (config.__wakeRetryCount ?? 0) < MAX_WAKE_RETRIES) {
       config.__wakeRetryCount = (config.__wakeRetryCount ?? 0) + 1;
-      notifyWaking(true);
-      await sleep(Math.min(2000 * config.__wakeRetryCount, 10_000));
-      return api(config);
+      setWaking(+1);
+      try {
+        await sleep(Math.min(2000 * config.__wakeRetryCount, 10_000));
+        return await api(config);
+      } finally {
+        setWaking(-1);
+      }
     }
 
-    notifyWaking(false);
     return Promise.reject(error);
   }
 );
@@ -115,7 +129,9 @@ export const transactionsApi = {
     api.get<PaginatedResponse<Transaction>>("/transactions", { params: filters }).then((r) => r.data),
   get: (id: number) => api.get<Transaction>(`/transactions/${id}`).then((r) => r.data),
   exportCsv: async (filters: TransactionFilters) => {
-    const response = await api.get("/transactions/export", { params: filters, responseType: "blob" });
+    // timeout: 0 — a large CSV export can legitimately take longer than the
+    // default 15s request timeout; don't abort (and don't trigger wake-retry).
+    const response = await api.get("/transactions/export", { params: filters, responseType: "blob", timeout: 0 });
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement("a");
     link.href = url;
@@ -166,7 +182,7 @@ export const alertsApi = {
   requestVerification: (id: number, investigator: string, notes: string) =>
     api.post<Alert>(`/alerts/${id}/request-verification`, { investigator, notes }).then((r) => r.data),
   downloadReport: async (id: number, alertRef: string) => {
-    const response = await api.get(`/alerts/${id}/report`, { responseType: "blob" });
+    const response = await api.get(`/alerts/${id}/report`, { responseType: "blob", timeout: 0 });
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement("a");
     link.href = url;

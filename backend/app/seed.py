@@ -93,18 +93,27 @@ def sync_rules(db) -> None:
             setattr(rule, field, definition[field])
 
 
-def seed_admin_user(db) -> None:
-    if not db.query(User).filter(User.username == settings.ADMIN_USERNAME).first():
-        db.add(
-            User(
-                username=settings.ADMIN_USERNAME,
-                password_hash=hash_password(settings.ADMIN_PASSWORD),
-                full_name="Admin Investigator",
-                role="ADMIN",
-            )
-        )
-    if not db.query(User).filter(User.username == "analyst").first():
-        db.add(User(username="analyst", password_hash=hash_password("analyst123"), full_name="Priya Sharma", role="ANALYST"))
+def _upsert_user(db, username: str, password: str, full_name: str, role: str) -> None:
+    """Create the user if missing, or re-sync its password/name/role if it exists.
+    Runs on every startup (like sync_rules) so credentials configured via env
+    vars actually take effect on redeploys against an already-seeded database."""
+    user = db.query(User).filter(User.username == username).first()
+    if user is None:
+        db.add(User(username=username, password_hash=hash_password(password), full_name=full_name, role=role))
+        return
+    user.password_hash = hash_password(password)
+    user.full_name = full_name
+    user.role = role
+
+
+def sync_users(db) -> None:
+    _upsert_user(db, settings.ADMIN_USERNAME, settings.ADMIN_PASSWORD, "Admin Investigator", "ADMIN")
+    if settings.SEED_DEMO_ANALYST:
+        _upsert_user(db, settings.ANALYST_USERNAME, settings.ANALYST_PASSWORD, "Priya Sharma", "ANALYST")
+    else:
+        # Flag turned off on an already-seeded DB: remove the demo analyst so the
+        # repo-visible default credential is no longer a live login.
+        db.query(User).filter(User.username == settings.ANALYST_USERNAME).delete()
 
 
 def seed_customers(db, india: Country) -> list[Customer]:
@@ -145,6 +154,8 @@ def run_seed() -> None:
     try:
         logger.info("Syncing fraud detection rule catalog...")
         sync_rules(db)
+        logger.info("Syncing user accounts...")
+        sync_users(db)
         db.commit()
 
         if db.query(Customer).count() > 0:
@@ -157,9 +168,6 @@ def run_seed() -> None:
         logger.info("Seeding merchants and blacklists...")
         seed_merchants(db, countries["India"])
         seed_blacklisted_ips(db)
-
-        logger.info("Seeding admin users...")
-        seed_admin_user(db)
 
         logger.info(f"Seeding {NUM_CUSTOMERS} customer profiles (accounts, devices, beneficiaries)...")
         seed_customers(db, countries["India"])
