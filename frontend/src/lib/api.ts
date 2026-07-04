@@ -182,15 +182,36 @@ export const alertsApi = {
   requestVerification: (id: number, investigator: string, notes: string) =>
     api.post<Alert>(`/alerts/${id}/request-verification`, { investigator, notes }).then((r) => r.data),
   downloadReport: async (id: number, alertRef: string) => {
-    const response = await api.get(`/alerts/${id}/report`, { responseType: "blob", timeout: 0 });
-    const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${alertRef}_investigation_report.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
+    // Open a blank tab synchronously (before the await) so mobile popup blockers
+    // don't treat the later navigation as an unsolicited popup.
+    const viewerTab = window.open("", "_blank");
+    try {
+      const response = await api.get(`/alerts/${id}/report`, { responseType: "blob", timeout: 0 });
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+
+      if (viewerTab) {
+        // Render inline via the browser's native PDF viewer. Forcing an OS-level
+        // file download here is unreliable on mobile: some Android browsers save
+        // blob downloads without the correct file type in the Downloads metadata,
+        // so re-opening the saved file launches a plain-text viewer instead of a
+        // PDF reader. Viewing in-browser sidesteps that OS handoff entirely, and
+        // the browser's own viewer still offers a save/download button.
+        viewerTab.location.href = url;
+      } else {
+        // Popup blocked — fall back to a direct download.
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${alertRef}_investigation_report.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      viewerTab?.close();
+      throw err;
+    }
   },
 };
 
