@@ -9,6 +9,7 @@ import { Logo } from "@/components/layout/Logo";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useAuth } from "@/hooks/useAuth";
+import { API_BASE_URL } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export default function Login() {
@@ -131,6 +132,9 @@ export default function Login() {
                 </p>
                 <p className="mt-1">
                   Password: <span className="font-mono font-semibold text-slate-700">admin</span>
+                </p>
+                <p className="mt-2 border-t border-slate-200 pt-2 text-[10px] text-slate-400">
+                  API endpoint: <span className="font-mono">{API_BASE_URL}</span>
                 </p>
               </div>
             )}

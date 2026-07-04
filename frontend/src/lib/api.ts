@@ -15,7 +15,11 @@ import type {
   Transaction,
 } from "@/types";
 
-export const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL ?? "/api", timeout: 15_000 });
+// `||` (not `??`) so an env var that is defined-but-empty at build time still
+// falls back to the same-origin relative path instead of producing "".
+export const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL || "/api";
+
+export const api = axios.create({ baseURL: API_BASE_URL, timeout: 15_000 });
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("auth_token");
