@@ -14,8 +14,8 @@
 
 [Overview](#overview) · [Features](#key-features) · [Architecture](#architecture) · [Installation](#installation) · [Documentation](#documentation) · [Screenshots](#screenshots)
 
-**Live demo:** _not yet deployed — follow [Deploying a live demo](#deploying-a-live-demo) below, then replace
-this line with your `https://<user>.github.io/<repo>/` URL._
+**🌐 Live demo:** [dipakmandlik.github.io/Fraud-transaction-](https://dipakmandlik.github.io/Fraud-transaction-/) — sign in with `admin` / `admin`
+<br/><sub>Hosted on free tiers: the backend may take up to a minute to wake on first visit.</sub>
 
 </div>
 
