@@ -1,3 +1,4 @@
+import { isAxiosError } from "axios";
 import { ChevronDown, Eye, EyeOff } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
@@ -30,8 +31,18 @@ export default function Login() {
       sessionStorage.setItem("justLoggedIn", "1");
       setInitializing(true);
       window.setTimeout(() => navigate("/", { replace: true }), 1400);
-    } catch {
-      setError("Invalid username or password");
+    } catch (err) {
+      if (isAxiosError(err)) {
+        if (err.response?.status === 401) {
+          setError("Invalid username or password");
+        } else if (!err.response) {
+          setError("Could not reach the server. It may still be waking up — please try again in a moment.");
+        } else {
+          setError(`Sign-in failed (${err.response.status}): ${err.response.data?.detail ?? "please try again."}`);
+        }
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
       setLoading(false);
     }
   }
