@@ -42,7 +42,11 @@ jobs:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
           VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
           VITE_WS_BASE_URL: ${{ vars.VITE_WS_BASE_URL }}
-        run: npm run build
+        run: |
+          echo "VITE_BASE_PATH=$VITE_BASE_PATH"
+          echo "VITE_API_BASE_URL=${VITE_API_BASE_URL:-<empty - repo variable not set>}"
+          echo "VITE_WS_BASE_URL=${VITE_WS_BASE_URL:-<empty - repo variable not set>}"
+          npm run build
 
       - name: Add SPA fallback (404.html)
         run: cp frontend/dist/index.html frontend/dist/404.html
