@@ -1,25 +1,36 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { Globe2, MapPin, ShieldAlert } from "lucide-react";
+import { Globe2, MapPin, ShieldAlert, Plus, Minus, Crosshair } from "lucide-react";
+import {
+  ComposableMap,
+  Geographies,
+  Geography,
+  Marker,
+  ZoomableGroup,
+} from "react-simple-maps";
+import worldTopo from "world-atlas/countries-110m.json";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/Button";
 import { useNotifications } from "@/hooks/useNotifications";
 import type { GeoPoint, Transaction } from "@/types";
 import { cn, formatNumber } from "@/lib/utils";
 
+// Country outlines come from a bundled world-atlas topojson — no map tiles and
+// no runtime network requests, so the map renders identically on GitHub Pages,
+// offline, or behind a strict CSP.
+const GEOGRAPHY = worldTopo as unknown as Parameters<typeof Geographies>[0]["geography"];
+
+const MAP_W = 820;
+const MAP_H = 460;
+const WORLD_VIEW = { coordinates: [34, 22] as [number, number], zoom: 1 };
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 26;
 const PING_LIFETIME_MS = 2600;
-const VIEW_W = 100;
-const VIEW_H = 62.5; // 16:10 aspect ratio to match the container
-const PAD = 9; // inner padding (in viewBox units) so bubbles never touch the edge
 
+type View = { coordinates: [number, number]; zoom: number };
 type RiskBand = "high" | "medium" | "low";
-
-function riskBand(score: number): RiskBand {
-  if (score >= 61) return "high";
-  if (score >= 31) return "medium";
-  return "low";
-}
 
 const BAND_COLOR: Record<RiskBand, string> = {
   high: "#DC2626",
@@ -27,101 +38,122 @@ const BAND_COLOR: Record<RiskBand, string> = {
   low: "#2563EB",
 };
 
-function percentile(sorted: number[], p: number): number {
-  if (sorted.length === 0) return 0;
-  const idx = (sorted.length - 1) * p;
-  const lo = Math.floor(idx);
-  const hi = Math.ceil(idx);
-  if (lo === hi) return sorted[lo];
-  return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+function riskBand(score: number): RiskBand {
+  if (score >= 61) return "high";
+  if (score >= 31) return "medium";
+  return "low";
 }
 
-/** Fit the projection to the *bulk* of the data (10th–90th percentile of
- * coordinates) rather than the raw min/max. A handful of far-flung foreign
- * transactions would otherwise stretch the bounds and squeeze every domestic
- * city into one dense blob; here the dense cluster spreads across the canvas
- * and the rare outliers are simply clamped to the map edge. */
-function makeProjection(points: GeoPoint[]) {
-  const lats = points.map((p) => p.latitude).sort((a, b) => a - b);
-  const lons = points.map((p) => p.longitude).sort((a, b) => a - b);
-
-  let minLat = percentile(lats, 0.2);
-  let maxLat = percentile(lats, 0.8);
-  let minLon = percentile(lons, 0.2);
-  let maxLon = percentile(lons, 0.8);
-
-  // Guard against a zero-width/height span (single city, or all-identical).
-  if (!isFinite(minLat) || maxLat - minLat < 0.5) {
-    const mid = isFinite(minLat) ? (minLat + maxLat) / 2 : 22;
-    minLat = mid - 5;
-    maxLat = mid + 5;
-  }
-  if (!isFinite(minLon) || maxLon - minLon < 0.5) {
-    const mid = isFinite(minLon) ? (minLon + maxLon) / 2 : 80;
-    minLon = mid - 5;
-    maxLon = mid + 5;
-  }
-
-  const latSpan = maxLat - minLat;
-  const lonSpan = maxLon - minLon;
-  const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-
-  return (lat: number, lon: number) => {
-    const x = PAD + ((lon - minLon) / lonSpan) * (VIEW_W - 2 * PAD);
-    const y = PAD + (1 - (lat - minLat) / latSpan) * (VIEW_H - 2 * PAD);
-    return { x: clamp(x, 1, VIEW_W - 1), y: clamp(y, 1, VIEW_H - 1) };
-  };
-}
+const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 interface FraudPing {
   id: number;
-  x: number;
-  y: number;
+  coordinates: [number, number];
 }
 
 export function GeoHeatMap({ data }: { data: GeoPoint[] }) {
   const { onTransaction } = useNotifications();
+  const [view, setView] = useState<View>(WORLD_VIEW);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [hovered, setHovered] = useState<string | null>(null);
   const [pings, setPings] = useState<FraudPing[]>([]);
-  const [activeKey, setActiveKey] = useState<string | null>(null);
+
+  const viewRef = useRef<View>(WORLD_VIEW);
+  const rafRef = useRef<number | undefined>(undefined);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  const project = useMemo(() => makeProjection(data), [data]);
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
+
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(rafRef.current ?? 0);
+      timersRef.current.forEach(clearTimeout);
+    },
+    []
+  );
+
+  // Smoothly tween center/zoom over ~720ms — this is what turns a click into a
+  // "fly in" rather than an instant jump.
+  const animateTo = useCallback((target: View) => {
+    cancelAnimationFrame(rafRef.current ?? 0);
+    const start = viewRef.current;
+    const t0 = performance.now();
+    const duration = 720;
+    const step = (now: number) => {
+      const p = Math.min(1, (now - t0) / duration);
+      const e = easeInOut(p);
+      const next: View = {
+        coordinates: [
+          lerp(start.coordinates[0], target.coordinates[0], e),
+          lerp(start.coordinates[1], target.coordinates[1], e),
+        ],
+        zoom: lerp(start.zoom, target.zoom, e),
+      };
+      viewRef.current = next;
+      setView(next);
+      if (p < 1) rafRef.current = requestAnimationFrame(step);
+    };
+    rafRef.current = requestAnimationFrame(step);
+  }, []);
+
+  const keyOf = (p: GeoPoint) => `${p.city}-${p.country}`;
+
+  const flyTo = useCallback(
+    (point: GeoPoint) => {
+      setSelected(keyOf(point));
+      animateTo({ coordinates: [point.longitude, point.latitude], zoom: 6 });
+    },
+    [animateTo]
+  );
+
+  const resetView = useCallback(() => {
+    setSelected(null);
+    animateTo(WORLD_VIEW);
+  }, [animateTo]);
+
+  const zoomBy = useCallback(
+    (factor: number) => {
+      const z = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, viewRef.current.zoom * factor));
+      animateTo({ coordinates: viewRef.current.coordinates, zoom: z });
+    },
+    [animateTo]
+  );
+
   const maxCount = useMemo(() => Math.max(1, ...data.map((d) => d.count)), [data]);
-
-  const totals = useMemo(() => {
-    const txns = data.reduce((s, d) => s + d.count, 0);
-    const fraud = data.reduce((s, d) => s + d.fraud_count, 0);
-    return { txns, fraud, cities: data.length };
-  }, [data]);
-
-  // Highest-fraud locations first; break ties by transaction volume.
+  const totals = useMemo(
+    () => ({
+      cities: data.length,
+      txns: data.reduce((s, d) => s + d.count, 0),
+      fraud: data.reduce((s, d) => s + d.fraud_count, 0),
+    }),
+    [data]
+  );
   const hotspots = useMemo(
-    () =>
-      [...data]
-        .sort((a, b) => b.fraud_count - a.fraud_count || b.count - a.count)
-        .slice(0, 6),
+    () => [...data].sort((a, b) => b.fraud_count - a.fraud_count || b.count - a.count).slice(0, 6),
     [data]
   );
 
+  // Live fraud pings — a red pulse appears at the real location of each incoming
+  // fraudulent transaction, then fades. Keeps the map feeling alive.
   useEffect(() => {
     const unsubscribe = onTransaction((incoming) => {
       const txn = incoming as Transaction;
       if (!txn.is_fraud) return;
-      const { x, y } = project(txn.latitude, txn.longitude);
-      setPings((prev) => [...prev, { id: txn.id, x, y }]);
+      setPings((prev) => [...prev, { id: txn.id, coordinates: [txn.longitude, txn.latitude] }]);
       const timer = setTimeout(() => {
         setPings((prev) => prev.filter((p) => p.id !== txn.id));
       }, PING_LIFETIME_MS);
       timersRef.current.push(timer);
     });
-    return () => {
-      unsubscribe();
-      timersRef.current.forEach(clearTimeout);
-    };
-  }, [onTransaction, project]);
+    return () => unsubscribe();
+  }, [onTransaction]);
 
-  const keyOf = (p: GeoPoint) => `${p.city}-${p.country}`;
+  const activeKey = hovered ?? selected;
   const active = data.find((p) => keyOf(p) === activeKey) ?? null;
+  const z = view.zoom;
 
   return (
     <Card>
@@ -130,7 +162,7 @@ export function GeoHeatMap({ data }: { data: GeoPoint[] }) {
           <div>
             <CardTitle>Geographic Transaction Heat Map</CardTitle>
             <CardDescription>
-              Bubble size = volume &middot; color = average risk &middot; pulses = live fraud
+              Bubble size = volume &middot; color = average risk &middot; scroll to zoom, click a point to fly in
             </CardDescription>
           </div>
           <div className="flex items-center gap-4 text-right">
@@ -146,82 +178,108 @@ export function GeoHeatMap({ data }: { data: GeoPoint[] }) {
         ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px]">
             {/* Map */}
-            <div className="relative aspect-[16/10] overflow-hidden rounded-xl border border-slate-200/70 bg-[radial-gradient(circle_at_50%_35%,#eef4ff,#f1f5f9_70%)]">
-              <svg
-                viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-                preserveAspectRatio="xMidYMid meet"
-                className="absolute inset-0 h-full w-full"
-                onMouseLeave={() => setActiveKey(null)}
+            <div className="relative overflow-hidden rounded-xl border border-slate-200/70 bg-[radial-gradient(circle_at_50%_30%,#eaf2ff,#dce7f5_70%)]">
+              <ComposableMap
+                projection="geoMercator"
+                width={MAP_W}
+                height={MAP_H}
+                projectionConfig={{ scale: 130 }}
+                style={{ width: "100%", height: "auto" }}
               >
-                <defs>
-                  {(["high", "medium", "low"] as RiskBand[]).map((band) => (
-                    <radialGradient key={band} id={`bubble-${band}`} cx="50%" cy="50%" r="50%">
-                      <stop offset="0%" stopColor={BAND_COLOR[band]} stopOpacity={0.55} />
-                      <stop offset="100%" stopColor={BAND_COLOR[band]} stopOpacity={0.12} />
-                    </radialGradient>
-                  ))}
-                  <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur stdDeviation="0.5" result="b" />
-                    <feMerge>
-                      <feMergeNode in="b" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                </defs>
+                <ZoomableGroup
+                  center={view.coordinates}
+                  zoom={view.zoom}
+                  minZoom={MIN_ZOOM}
+                  maxZoom={MAX_ZOOM}
+                  onMoveEnd={(pos) => setView({ coordinates: pos.coordinates as [number, number], zoom: pos.zoom })}
+                >
+                  <Geographies geography={GEOGRAPHY}>
+                    {({ geographies }) =>
+                      geographies.map((geo) => (
+                        <Geography
+                          key={geo.rsmKey}
+                          geography={geo}
+                          fill="#eef2f7"
+                          stroke="#c2ccd9"
+                          strokeWidth={0.4}
+                          style={{
+                            default: { outline: "none" },
+                            hover: { fill: "#e0e8f4", outline: "none" },
+                            pressed: { fill: "#e0e8f4", outline: "none" },
+                          }}
+                        />
+                      ))
+                    }
+                  </Geographies>
 
-                {/* graticule */}
-                {Array.from({ length: 7 }).map((_, i) => (
-                  <line key={`v${i}`} x1={(i * VIEW_W) / 6} y1={0} x2={(i * VIEW_W) / 6} y2={VIEW_H} stroke="#cbd5e1" strokeWidth={0.1} strokeDasharray="0.6 0.9" />
-                ))}
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <line key={`h${i}`} x1={0} y1={(i * VIEW_H) / 4} x2={VIEW_W} y2={(i * VIEW_H) / 4} stroke="#cbd5e1" strokeWidth={0.1} strokeDasharray="0.6 0.9" />
-                ))}
+                  {/* Location bubbles */}
+                  {data.map((point) => {
+                    const band = riskBand(point.risk_score_avg);
+                    const color = BAND_COLOR[band];
+                    const baseR = 3 + Math.sqrt(point.count / maxCount) * 9;
+                    const r = baseR / z; // keep bubbles a stable screen size at any zoom
+                    const key = keyOf(point);
+                    const isActive = key === activeKey;
+                    return (
+                      <Marker
+                        key={key}
+                        coordinates={[point.longitude, point.latitude]}
+                        onMouseEnter={() => setHovered(key)}
+                        onMouseLeave={() => setHovered(null)}
+                        onClick={() => flyTo(point)}
+                        style={{ default: { cursor: "pointer" }, hover: { cursor: "pointer" }, pressed: { cursor: "pointer" } }}
+                      >
+                        {band === "high" && (
+                          <circle r={r} fill={color} opacity={0.35}>
+                            <animate attributeName="r" values={`${r};${r * 2.3};${r}`} dur="2.4s" repeatCount="indefinite" />
+                            <animate attributeName="opacity" values="0.35;0;0.35" dur="2.4s" repeatCount="indefinite" />
+                          </circle>
+                        )}
+                        <circle
+                          r={r}
+                          fill={color}
+                          fillOpacity={isActive ? 0.4 : 0.26}
+                          stroke={color}
+                          strokeWidth={(isActive ? 1.6 : 1) / z}
+                          strokeOpacity={isActive ? 1 : 0.6}
+                        />
+                        <circle r={Math.max(0.8, r * 0.32)} fill={color} />
+                      </Marker>
+                    );
+                  })}
 
-                {/* location bubbles */}
-                {data.map((point) => {
-                  const { x, y } = project(point.latitude, point.longitude);
-                  const band = riskBand(point.risk_score_avg);
-                  // sqrt scaling so a few very-high-volume cities don't balloon
-                  // into overlapping blobs that hide the rest.
-                  const radius = 1.2 + Math.sqrt(point.count / maxCount) * 2.6;
-                  const key = keyOf(point);
-                  const isActive = key === activeKey;
-                  return (
-                    <g
-                      key={key}
-                      className="cursor-pointer"
-                      onMouseEnter={() => setActiveKey(key)}
-                      onClick={() => setActiveKey((k) => (k === key ? null : key))}
-                    >
-                      {/* generous invisible hit area for hover/tap */}
-                      <circle cx={x} cy={y} r={Math.max(radius, 3)} fill="transparent" />
-                      <circle
-                        cx={x}
-                        cy={y}
-                        r={radius}
-                        fill={`url(#bubble-${band})`}
-                        stroke={BAND_COLOR[band]}
-                        strokeWidth={isActive ? 0.5 : 0.25}
-                        strokeOpacity={isActive ? 1 : 0.6}
-                        filter={band === "high" ? "url(#glow)" : undefined}
-                      />
-                      <circle cx={x} cy={y} r={0.7} fill={BAND_COLOR[band]} />
-                    </g>
-                  );
-                })}
+                  {/* Live fraud pings */}
+                  {pings.map((ping) => {
+                    const pr = 6 / z;
+                    return (
+                      <Marker key={ping.id} coordinates={ping.coordinates}>
+                        <circle r={pr} fill="none" stroke="#DC2626" strokeWidth={1.4 / z}>
+                          <animate attributeName="r" values={`${pr * 0.5};${pr * 2.4}`} dur="1.3s" repeatCount="indefinite" />
+                          <animate attributeName="opacity" values="0.9;0" dur="1.3s" repeatCount="indefinite" />
+                        </circle>
+                        <circle r={2 / z} fill="#DC2626" />
+                      </Marker>
+                    );
+                  })}
+                </ZoomableGroup>
+              </ComposableMap>
 
-                {/* live fraud pings */}
-                {pings.map((ping) => (
-                  <g key={ping.id} style={{ transformOrigin: `${ping.x}px ${ping.y}px` }}>
-                    <circle cx={ping.x} cy={ping.y} r={1.4} fill="#DC2626" className="animate-ping" style={{ transformOrigin: `${ping.x}px ${ping.y}px` }} />
-                    <circle cx={ping.x} cy={ping.y} r={1.6} fill="none" stroke="#DC2626" strokeWidth={0.35} opacity={0.8} />
-                  </g>
-                ))}
-              </svg>
+              {/* Zoom controls */}
+              <div className="absolute right-3 top-3 flex flex-col gap-1.5">
+                <Button size="icon" variant="outline" aria-label="Zoom in" className="h-8 w-8 shadow-sm" onClick={() => zoomBy(1.6)}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+                <Button size="icon" variant="outline" aria-label="Zoom out" className="h-8 w-8 shadow-sm" onClick={() => zoomBy(1 / 1.6)}>
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <Button size="icon" variant="outline" aria-label="Reset view" className="h-8 w-8 shadow-sm" onClick={resetView}>
+                  <Crosshair className="h-4 w-4" />
+                </Button>
+              </div>
 
-              {/* hover/tap detail card */}
+              {/* Active-location detail card */}
               {active && (
-                <div className="pointer-events-none absolute left-3 top-3 max-w-[220px] rounded-lg border border-slate-200 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm">
+                <div className="pointer-events-none absolute bottom-3 left-3 max-w-[230px] rounded-lg border border-slate-200 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm">
                   <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
                     <MapPin className="h-3.5 w-3.5 text-primary-600" />
                     {active.city}
@@ -251,12 +309,12 @@ export function GeoHeatMap({ data }: { data: GeoPoint[] }) {
                     <li key={key}>
                       <button
                         type="button"
-                        onMouseEnter={() => setActiveKey(key)}
-                        onMouseLeave={() => setActiveKey(null)}
-                        onClick={() => setActiveKey((k) => (k === key ? null : key))}
+                        onMouseEnter={() => setHovered(key)}
+                        onMouseLeave={() => setHovered(null)}
+                        onClick={() => flyTo(point)}
                         className={cn(
                           "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors",
-                          key === activeKey ? "bg-white shadow-sm" : "hover:bg-white/70"
+                          key === selected ? "bg-primary-50 ring-1 ring-primary/30" : "hover:bg-white/70"
                         )}
                       >
                         <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: BAND_COLOR[band] }} />
@@ -267,6 +325,9 @@ export function GeoHeatMap({ data }: { data: GeoPoint[] }) {
                   );
                 })}
               </ul>
+              <p className="mt-3 border-t border-slate-200/70 pt-2 text-[10px] leading-relaxed text-slate-400">
+                Click any hotspot to fly the map to it. Use the crosshair to return to the world view.
+              </p>
             </div>
           </div>
         )}
