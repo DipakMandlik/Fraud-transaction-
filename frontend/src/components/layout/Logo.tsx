@@ -16,7 +16,7 @@ const SIZE_CLASSES: Record<NonNullable<LogoProps["size"]>, string> = {
 export function Logo({ className, size = "md" }: LogoProps) {
   return (
     <img
-      src="/pibythree-logo.jpg"
+      src={`${import.meta.env.BASE_URL}pibythree-logo.jpg`}
       alt="PiByThree"
       className={cn("w-auto object-contain", SIZE_CLASSES[size], className)}
     />

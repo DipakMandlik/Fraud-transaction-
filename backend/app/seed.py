@@ -5,6 +5,7 @@ Run with: python -m app.seed
 
 import random
 
+from app.config import settings
 from app.database import Base, SessionLocal, engine
 from app.models import Account, Beneficiary, Blacklist, Country, Customer, Device, Merchant, Rule, User
 from app.services import data_factory
@@ -93,10 +94,17 @@ def sync_rules(db) -> None:
 
 
 def seed_admin_user(db) -> None:
-    if db.query(User).filter(User.username == "admin").first():
-        return
-    db.add(User(username="admin", password_hash=hash_password("admin"), full_name="Admin Investigator", role="ADMIN"))
-    db.add(User(username="analyst", password_hash=hash_password("analyst123"), full_name="Priya Sharma", role="ANALYST"))
+    if not db.query(User).filter(User.username == settings.ADMIN_USERNAME).first():
+        db.add(
+            User(
+                username=settings.ADMIN_USERNAME,
+                password_hash=hash_password(settings.ADMIN_PASSWORD),
+                full_name="Admin Investigator",
+                role="ADMIN",
+            )
+        )
+    if not db.query(User).filter(User.username == "analyst").first():
+        db.add(User(username="analyst", password_hash=hash_password("analyst123"), full_name="Priya Sharma", role="ANALYST"))
 
 
 def seed_customers(db, india: Country) -> list[Customer]:
