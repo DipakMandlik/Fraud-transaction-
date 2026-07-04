@@ -14,6 +14,9 @@
 
 [Overview](#overview) · [Features](#key-features) · [Architecture](#architecture) · [Installation](#installation) · [Documentation](#documentation) · [Screenshots](#screenshots)
 
+**Live demo:** _not yet deployed — follow [Deploying a live demo](#deploying-a-live-demo) below, then replace
+this line with your `https://<user>.github.io/<repo>/` URL._
+
 </div>
 
 ---
@@ -174,6 +177,20 @@ The frontend dev server runs on http://localhost:5173 and proxies `/api` and `/w
 
 Full deployment guidance, including environment sizing and production notes, is in
 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+## Deploying a live demo
+
+The frontend can be published to **GitHub Pages** for a shareable, always-online link, with the backend hosted
+on a free-tier service GitHub Pages can call over the network (GitHub Pages itself only serves static files).
+This repo already includes everything needed for that path:
+
+- `.github/workflows/deploy-pages.yml` — builds and publishes the frontend to GitHub Pages on every push to
+  `main`.
+- `render.yaml` — a one-click Render Blueprint for the backend (FastAPI + a free Redis-compatible Key Value
+  instance), paired with a free Neon Postgres database.
+
+Full step-by-step setup, architecture diagram, and the honest trade-offs of running on free tiers (cold starts,
+storage limits) are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md#live-free-tier-deployment-github-pages--render--neon).
 
 ## Configuration
 

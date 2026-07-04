@@ -1,0 +1,52 @@
+# Render Blueprint — one-click deploy for the Fraud Detection Platform backend.
+#
+# Usage: on render.com, "New +" -> "Blueprint" -> select this repository. Render
+# reads this file automatically. You will be prompted to fill in the env vars
+# marked "sync: false" below (Neon Postgres connection string, admin
+# credentials, and the GitHub Pages origin for CORS) before the first deploy.
+#
+# Redis is provisioned here as a free Render Key Value instance on the private
+# network — no external Redis account needed. Postgres is intentionally NOT
+# provisioned by this Blueprint: Render's free Postgres expires after 30 days,
+# so this app is designed to point DATABASE_URL at a permanent free Neon
+# Postgres instance instead (see docs/DEPLOYMENT.md).
+
+services:
+  - type: web
+    name: fraud-detection-platform-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false # paste your Neon connection string here
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: fraud-detection-platform-redis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_USERNAME
+        sync: false # e.g. admin
+      - key: ADMIN_PASSWORD
+        sync: false # set a real password before this URL is public
+      - key: CORS_ORIGINS
+        sync: false # e.g. https://<your-github-username>.github.io
+      - key: TXN_MIN_INTERVAL_SECONDS
+        value: "2"
+      - key: TXN_MAX_INTERVAL_SECONDS
+        value: "5"
+      - key: FRAUD_INJECTION_MIN_SECONDS
+        value: "30"
+      - key: FRAUD_INJECTION_MAX_SECONDS
+        value: "60"
+      - key: FRAUD_RATIO
+        value: "0.10"
+
+  - type: keyvalue
+    name: fraud-detection-platform-redis
+    plan: free
+    ipAllowList: []

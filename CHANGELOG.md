@@ -12,6 +12,16 @@ All notable changes to the Fraud Detection Platform are documented in this file.
 - Fresh product screenshot set (`assets/screenshots/`) covering Login, Dashboard, Transaction Simulator,
   Transaction Explorer, Customer 360°, Fraud Alert Center, Case Investigation, and Analytics.
 - Repository governance files: `LICENSE`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `ROADMAP.md`.
+- Live free-tier deployment path: a GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) publishing
+  the frontend to GitHub Pages, and a Render Blueprint (`render.yaml`) for one-click backend hosting. The
+  frontend now supports a configurable API/WebSocket base URL and subpath deployment, and shows a "waking up
+  the live backend" banner during free-tier cold starts instead of a broken-looking error.
+
+### Fixed
+- `frontend/public/manifest.json` used absolute root paths that would 404 under a GitHub Pages project subpath;
+  switched to paths relative to the manifest itself.
+- The 401 session-expiry redirect in `frontend/src/lib/api.ts` now respects the app's base path instead of
+  hard-navigating to `/login`, which would escape a GitHub Pages subpath deployment.
 
 ### Changed
 - Rewrote `README.md` as enterprise product documentation with a hero banner, architecture diagrams, feature

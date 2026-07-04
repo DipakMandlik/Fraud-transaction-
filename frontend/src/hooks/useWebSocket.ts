@@ -14,8 +14,11 @@ export function useLiveEvents(onEvent: (event: WsEvent) => void): void {
     const connect = () => {
       const token = localStorage.getItem("auth_token");
       if (!token) return;
-      const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-      socket = new WebSocket(`${protocol}://${window.location.host}/ws/events?token=${encodeURIComponent(token)}`);
+      const wsBase = import.meta.env.VITE_WS_BASE_URL as string | undefined;
+      const socketUrl = wsBase
+        ? `${wsBase}/ws/events?token=${encodeURIComponent(token)}`
+        : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ws/events?token=${encodeURIComponent(token)}`;
+      socket = new WebSocket(socketUrl);
 
       socket.onmessage = (event) => {
         try {

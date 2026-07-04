@@ -3,10 +3,10 @@
   "short_name": "Fraud Detection",
   "description": "Enterprise real-time fraud detection and investigation platform. Powered by PiByThree.",
   "icons": [
-    { "src": "/pibythree-logo.jpg", "sizes": "571x366", "type": "image/jpeg" }
+    { "src": "pibythree-logo.jpg", "sizes": "571x366", "type": "image/jpeg" }
   ],
   "theme_color": "#2563EB",
   "background_color": "#F8FAFC",
   "display": "standalone",
-  "start_url": "/"
+  "start_url": "."
 }

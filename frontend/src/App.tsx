@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-dom";
 
+import { BackendWakingBanner } from "@/components/layout/BackendWakingBanner";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { DemoModeProvider } from "@/hooks/useDemoMode";
 import { NotificationsProvider } from "@/hooks/useNotifications";
@@ -39,7 +40,8 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
+      <BackendWakingBanner />
+      <Router basename={import.meta.env.BASE_URL}>
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />

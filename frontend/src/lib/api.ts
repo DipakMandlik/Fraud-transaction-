@@ -15,7 +15,7 @@ import type {
   Transaction,
 } from "@/types";
 
-export const api = axios.create({ baseURL: "/api" });
+export const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL ?? "/api", timeout: 15_000 });
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("auth_token");
@@ -25,16 +25,51 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// The hosted demo backend runs on a free tier that can go to sleep after a
+// period of inactivity and take up to ~60s to wake on the next request. A
+// network-level failure (no HTTP response at all) is the signature of that
+// cold start rather than a real error, so retry silently with backoff before
+// surfacing anything to the UI.
+const MAX_WAKE_RETRIES = 6;
+const wakeListeners = new Set<(waking: boolean) => void>();
+
+export function onBackendWaking(listener: (waking: boolean) => void): () => void {
+  wakeListeners.add(listener);
+  return () => wakeListeners.delete(listener);
+}
+
+function notifyWaking(waking: boolean) {
+  wakeListeners.forEach((listener) => listener(waking));
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
+  (response) => {
+    notifyWaking(false);
+    return response;
+  },
+  async (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem("auth_token");
       localStorage.removeItem("auth_user");
-      if (!window.location.pathname.startsWith("/login")) {
-        window.location.href = "/login";
+      const loginPath = `${import.meta.env.BASE_URL}login`;
+      if (!window.location.pathname.startsWith(loginPath)) {
+        window.location.href = loginPath;
       }
+      return Promise.reject(error);
     }
+
+    const config = error.config;
+    const isNetworkFailure = !error.response;
+    if (isNetworkFailure && config && (config.__wakeRetryCount ?? 0) < MAX_WAKE_RETRIES) {
+      config.__wakeRetryCount = (config.__wakeRetryCount ?? 0) + 1;
+      notifyWaking(true);
+      await sleep(Math.min(2000 * config.__wakeRetryCount, 10_000));
+      return api(config);
+    }
+
+    notifyWaking(false);
     return Promise.reject(error);
   }
 );

@@ -124,6 +124,80 @@ the containerized deployment.
 - Sign in with the seeded `admin` / `admin` credentials (or whatever `ADMIN_USERNAME`/`ADMIN_PASSWORD` are set
   to) and confirm dashboard counters move on their own — that's the background transaction generator running.
 
+## Live free-tier deployment: GitHub Pages + Render + Neon
+
+This is a second, independent deployment recipe for putting a real, publicly reachable instance online at zero
+cost — useful for demos, portfolios, and stakeholder walkthroughs where cloning and running the stack locally
+isn't practical. It does **not** replace Docker Compose as the primary supported deployment; it's an additive
+option.
+
+GitHub Pages only serves static files, so it hosts the frontend only. The backend (FastAPI, PostgreSQL, Redis,
+and the APScheduler background jobs) runs on separate free-tier services that GitHub Pages calls over the
+network.
+
+### Architecture
+
+```
+GitHub Pages (static)              Render (free Web Service)         Neon (free Postgres)
+  React/Vite build          <--->    FastAPI + Uvicorn                 (permanent free tier)
+  https://<user>.github.io/          + APScheduler jobs        <--->
+    <repo>/                          + Render free Key Value
+                                        (Redis-compatible, private
+                                        network — no separate account)
+```
+
+- **Frontend**: built and deployed automatically by `.github/workflows/deploy-pages.yml` on every push to
+  `main`, published via GitHub Pages.
+- **Backend**: Render free Web Service, deployed straight from `backend/Dockerfile` via the `render.yaml`
+  Blueprint at the repo root.
+- **Redis**: a Render free **Key Value** instance (Render's current name for its Redis-compatible offering),
+  reached over Render's private network — no external Redis account needed, since this app only uses Redis as a
+  pub/sub transport with nothing persisted (`backend/app/services/event_bus.py`).
+- **Database**: Neon free-tier Postgres, chosen over Render's own free Postgres because Render's free database
+  expires after 30 days and must be manually recreated, while Neon's free tier is a standing allowance.
+
+### One-time setup (manual — requires your own accounts)
+
+1. **Neon**: create a free account at neon.tech → new project → copy the pooled connection string (it already
+   includes `?sslmode=require`).
+2. **Render**: create a free account at render.com → "New +" → "Blueprint" → connect this GitHub repository.
+   Render reads `render.yaml` automatically and provisions the web service plus the Key Value instance. When
+   prompted, fill in:
+   - `DATABASE_URL` → the Neon connection string from step 1
+   - `ADMIN_USERNAME` / `ADMIN_PASSWORD` → **do not leave these as `admin`/`admin` once the URL is public** —
+     this is a real, shared, publicly reachable instance; anyone with the URL can act as whoever holds these
+     credentials
+   - `CORS_ORIGINS` → your GitHub Pages **origin only**, e.g. `https://<your-username>.github.io` (no trailing
+     path — CORS matches scheme+host+port, not the `/<repo>/` subpath)
+
+   `REDIS_URL` and `SECRET_KEY` are wired automatically by the Blueprint (`fromService` / `generateValue`).
+   Deploy, then copy the resulting `https://<service>.onrender.com` URL.
+3. **GitHub repository variables** (Settings → Secrets and variables → Actions → Variables): set
+   - `VITE_API_BASE_URL` = `https://<service>.onrender.com/api`
+   - `VITE_WS_BASE_URL` = `wss://<service>.onrender.com`
+4. **GitHub Pages**: Settings → Pages → Source → "GitHub Actions" (one-time toggle).
+5. Push to `main` (or re-run the `Deploy Frontend to GitHub Pages` workflow) to trigger the first deploy.
+
+### What "live" actually means on the free tier
+
+- Render's free web service **sleeps after ~15 minutes with no HTTP traffic** and cold-starts (typically
+  30–60s) on the next request — while asleep, the background transaction/fraud generator is not running at
+  all, not just running slowly. Neon's free Postgres can similarly scale to zero when idle, which can stack
+  with the Render cold start on a fully idle demo. The frontend shows a "waking up the live backend" banner
+  (`frontend/src/components/layout/BackendWakingBanner.tsx`, wired through a silent retry-with-backoff in
+  `frontend/src/lib/api.ts`) during this window instead of surfacing a broken-looking error.
+- A continuous 24/7 keep-alive ping was deliberately **not** added here: it would keep Render's instance-hours
+  near its monthly free cap and, more importantly, would push Neon's compute past its free 100 CU-hour/month
+  allowance roughly two weeks into the month, causing a harder, unannounced outage than the cold-start UX it
+  was meant to avoid. If you want the demo to feel always-on for a specific window (a live walkthrough, an
+  interview), ping `GET /api/health` a few times shortly before that window instead of continuously.
+- Neon's free tier also caps storage at 0.5 GB. A generator running continuously for a long time will
+  eventually approach that; periodically pruning old generated transactions (or simply re-deploying) keeps a
+  long-lived free demo instance healthy.
+- This is a single shared instance — every visitor sees and can act on the same data. That's expected for a
+  demo, but is why rotating the admin credentials before sharing the URL matters more here than in a local or
+  Docker Compose deployment.
+
 ## Production considerations
 
 The Docker Compose setup here is built for demos, evaluation, and development — not turnkey production
