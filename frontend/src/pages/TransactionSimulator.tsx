@@ -11,6 +11,7 @@ import { RuleExecutionPanel } from "@/components/simulator/RuleExecutionPanel";
 import { Badge, riskTone, statusTone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { RiskGauge } from "@/components/ui/RiskGauge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useDemoMode } from "@/hooks/useDemoMode";
@@ -221,8 +222,8 @@ export default function TransactionSimulator() {
                     disabled={triggering !== null}
                     onClick={() => handleTriggerScenario(scenario.code)}
                     className={cn(
-                      "flex flex-col items-start gap-1 rounded-lg border border-slate-200 p-3 text-left transition-colors hover:border-primary hover:bg-primary-50",
-                      "disabled:cursor-not-allowed disabled:opacity-50"
+                      "flex flex-col items-start gap-1 rounded-lg border border-slate-200 p-3 text-left transition-all duration-150 hover:-translate-y-0.5 hover:border-primary hover:bg-primary-50 hover:shadow-card active:scale-[0.98]",
+                      "disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
                     )}
                     title={scenario.description}
                   >
@@ -247,10 +248,11 @@ export default function TransactionSimulator() {
             </CardHeader>
             <CardContent>
               {!txn ? (
-                <p className="py-16 text-center text-sm text-slate-400">
-                  Select an incident from the library above, or enable "Watch Live Feed" to see the next real
-                  transaction travel through the pipeline.
-                </p>
+                <EmptyState
+                  icon={Radio}
+                  title="No transaction in flight"
+                  description={'Select an incident from the library above, or enable "Watch Live Feed" to see the next real transaction travel through the pipeline.'}
+                />
               ) : (
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <PipelineFlow activeIndex={stageIndex} stoppedAt={stoppedAt} latencies={latencies} />
@@ -332,7 +334,7 @@ export default function TransactionSimulator() {
                   <button
                     key={t.id}
                     onClick={() => play(t)}
-                    className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm hover:bg-slate-50"
+                    className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm transition-all duration-150 hover:translate-x-0.5 hover:bg-slate-50"
                   >
                     <span className="truncate text-slate-700">{t.customer_name}</span>
                     <div className="flex shrink-0 items-center gap-1.5">

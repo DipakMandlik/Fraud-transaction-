@@ -12,7 +12,7 @@ export function ChannelDistributionChart({ data }: { data: ChannelDistribution[]
   const chartData = data.map((d) => ({ ...d, label: titleCase(d.channel) }));
 
   return (
-    <Card>
+    <Card interactive>
       <CardHeader>
         <CardTitle>Channel Distribution</CardTitle>
       </CardHeader>
@@ -32,8 +32,11 @@ export function ChannelDistributionChart({ data }: { data: ChannelDistribution[]
                 tickLine={false}
                 axisLine={false}
               />
-              <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #E2E8F0", fontSize: 12 }} />
-              <Bar dataKey="count" name="Transactions" radius={[0, 6, 6, 0]} barSize={16}>
+              <Tooltip
+                cursor={{ fill: "rgba(148, 163, 184, 0.08)" }}
+                contentStyle={{ borderRadius: 12, border: "1px solid #E2E8F0", fontSize: 12, boxShadow: "0 12px 28px -8px rgba(15,23,42,0.16)" }}
+              />
+              <Bar dataKey="count" name="Transactions" radius={[0, 6, 6, 0]} barSize={16} animationDuration={800} animationEasing="ease-out">
                 {chartData.map((_, index) => (
                   <Cell key={index} fill={COLORS[index % COLORS.length]} />
                 ))}

@@ -80,11 +80,18 @@ export function BehaviorComparison({ customer, alert }: { customer: CustomerDeta
         <span>Current Transaction</span>
       </div>
       <div className="divide-y divide-slate-100">
-        {rows.map((row) => (
-          <div key={row.label} className="grid grid-cols-[1fr_1.2fr_auto_1.2fr] items-center gap-2 px-4 py-2.5 text-sm">
+        {rows.map((row, i) => (
+          <div
+            key={row.label}
+            className={cn(
+              "grid animate-rise grid-cols-[1fr_1.2fr_auto_1.2fr] items-center gap-2 px-4 py-2.5 text-sm transition-colors",
+              row.isAnomaly && "bg-fraud-light/30"
+            )}
+            style={{ animationDelay: `${i * 60}ms` }}
+          >
             <span className="font-medium text-slate-500">{row.label}</span>
             <span className="text-slate-600">{row.normal}</span>
-            <ArrowRight className="h-3.5 w-3.5 text-slate-300" />
+            <ArrowRight className={cn("h-3.5 w-3.5", row.isAnomaly ? "text-fraud" : "text-slate-300")} />
             <span className={cn("font-semibold", row.isAnomaly ? "text-fraud" : "text-slate-700")}>{row.current}</span>
           </div>
         ))}

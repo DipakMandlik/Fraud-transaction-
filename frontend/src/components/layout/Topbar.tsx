@@ -14,7 +14,7 @@ export function Topbar({ title, subtitle, onMenuClick }: TopbarProps) {
   const { user, logout } = useAuth();
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 sm:px-6">
+    <header className="relative z-[1] flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 shadow-xs sm:px-6">
       <div className="flex min-w-0 items-center gap-3">
         <button
           onClick={onMenuClick}
@@ -34,7 +34,7 @@ export function Topbar({ title, subtitle, onMenuClick }: TopbarProps) {
         <NotificationBell />
         <div className="hidden h-6 w-px bg-slate-200 sm:block" />
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary-100 to-primary-200 text-sm font-semibold text-primary-700 ring-2 ring-white transition-transform hover:scale-105">
             {user?.full_name?.charAt(0) ?? "A"}
           </div>
           <div className="hidden leading-tight sm:block">

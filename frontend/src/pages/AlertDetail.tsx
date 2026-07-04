@@ -174,12 +174,20 @@ export default function AlertDetail() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <Card>
+          <Card
+            interactive
+            className={cn(
+              "border-l-4",
+              alert.severity === "CRITICAL" ? "border-l-fraud" : alert.severity === "HIGH" ? "border-l-warning" : "border-l-primary"
+            )}
+          >
             <CardHeader>
               <div>
                 <CardTitle>Case Overview</CardTitle>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <Badge tone={severityTone(alert.severity)}>{alert.severity} Severity</Badge>
+                  <Badge tone={severityTone(alert.severity)} dot pulse={alert.severity === "CRITICAL" && alert.status === "OPEN"}>
+                    {alert.severity} Severity
+                  </Badge>
                   <Badge tone={riskTone(alert.risk_score)}>Risk {alert.risk_score.toFixed(0)}</Badge>
                   <Badge tone={alertStatusTone(alert.status)}>{titleCase(alert.status)}</Badge>
                 </div>
@@ -192,7 +200,11 @@ export default function AlertDetail() {
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Why this was flagged</p>
               <ul className="space-y-2">
                 {alert.explanation.map((line, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                  <li
+                    key={i}
+                    className="flex animate-rise items-start gap-2 text-sm text-slate-700"
+                    style={{ animationDelay: `${i * 60}ms` }}
+                  >
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-fraud" />
                     {line}
                   </li>
@@ -201,7 +213,7 @@ export default function AlertDetail() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card interactive>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-fraud" /> Customer Behaviour Comparison
@@ -216,7 +228,7 @@ export default function AlertDetail() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card interactive>
             <CardHeader>
               <CardTitle>Risk Score Breakdown</CardTitle>
             </CardHeader>
@@ -225,7 +237,7 @@ export default function AlertDetail() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card interactive>
             <CardHeader>
               <CardTitle>Linked Transaction</CardTitle>
             </CardHeader>
@@ -249,7 +261,7 @@ export default function AlertDetail() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card interactive>
             <CardHeader>
               <CardTitle>Investigation Timeline</CardTitle>
             </CardHeader>
@@ -259,7 +271,7 @@ export default function AlertDetail() {
           </Card>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 lg:sticky lg:top-6 lg:self-start">
           <Card>
             <CardHeader>
               <CardTitle>Case Actions</CardTitle>

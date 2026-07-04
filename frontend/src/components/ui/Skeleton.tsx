@@ -3,5 +3,10 @@ import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 export function Skeleton({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("animate-pulse rounded-md bg-slate-200/80", className)} {...props} />;
+  return (
+    <div
+      className={cn("skeleton-shimmer animate-pulse rounded-md bg-slate-200/70", className)}
+      {...props}
+    />
+  );
 }

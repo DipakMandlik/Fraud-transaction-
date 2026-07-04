@@ -30,7 +30,7 @@ export default function TransactionDetail() {
       ) : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
-            <Card>
+            <Card interactive>
               <CardHeader>
                 <CardTitle>Transaction Overview</CardTitle>
                 <div className="flex items-center gap-2">
@@ -57,7 +57,7 @@ export default function TransactionDetail() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card interactive>
               <CardHeader>
                 <CardTitle>Fraud Detection Explanation</CardTitle>
               </CardHeader>
@@ -67,8 +67,12 @@ export default function TransactionDetail() {
                   <p className="text-sm text-slate-400">No rules triggered for this transaction.</p>
                 ) : (
                   <ul className="space-y-2">
-                    {query.data.triggered_rules.map((rule) => (
-                      <li key={rule} className="flex items-center gap-2 text-sm text-slate-700">
+                    {query.data.triggered_rules.map((rule, i) => (
+                      <li
+                        key={rule}
+                        className="flex animate-rise items-center gap-2 text-sm text-slate-700"
+                        style={{ animationDelay: `${i * 60}ms` }}
+                      >
                         <span className="h-1.5 w-1.5 rounded-full bg-fraud" />
                         {titleCase(rule)}
                       </li>
@@ -80,7 +84,7 @@ export default function TransactionDetail() {
           </div>
 
           <div className="space-y-6">
-            <Card>
+            <Card interactive>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-primary" /> Location
@@ -94,7 +98,7 @@ export default function TransactionDetail() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card interactive>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Smartphone className="h-4 w-4 text-primary" /> Device &amp; Network
@@ -106,7 +110,7 @@ export default function TransactionDetail() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card interactive>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Wallet className="h-4 w-4 text-primary" /> Account

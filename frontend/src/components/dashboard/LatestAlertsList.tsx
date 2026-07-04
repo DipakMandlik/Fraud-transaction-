@@ -28,7 +28,7 @@ export function LatestAlertsList() {
               <button
                 key={alert.id}
                 onClick={() => navigate(`/alerts/${alert.id}`)}
-                className="flex w-full items-start justify-between gap-3 px-5 py-3 text-left transition-colors hover:bg-slate-50"
+                className="flex w-full items-start justify-between gap-3 px-5 py-3 text-left transition-all duration-150 hover:translate-x-0.5 hover:bg-slate-50"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-slate-800">{alert.customer_name}</p>

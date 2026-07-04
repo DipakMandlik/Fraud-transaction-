@@ -20,7 +20,7 @@ import { LiveActivityFeed } from "@/components/dashboard/LiveActivityFeed";
 import { WelcomeBanner } from "@/components/dashboard/WelcomeBanner";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { dashboardApi, transactionsApi } from "@/lib/api";
-import { formatCurrency, formatNumber } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 
 export default function Dashboard() {
   const dashboardQuery = useQuery({
@@ -36,6 +36,9 @@ export default function Dashboard() {
   });
 
   const kpis = dashboardQuery.data?.kpis;
+  const trend = dashboardQuery.data?.trend ?? [];
+  const totalTrend = trend.map((t) => t.total);
+  const fraudTrend = trend.map((t) => t.fraud);
 
   return (
     <AppLayout
@@ -50,62 +53,71 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <KpiCard
               label="Transactions Today"
-              value={formatNumber(kpis?.transactions_today ?? 0)}
+              value={kpis?.transactions_today ?? 0}
               icon={Activity}
               tone="primary"
               hint={`${kpis?.transactions_per_minute ?? 0} / min`}
+              trend={totalTrend}
+              live
             />
             <KpiCard
               label="Fraud Detected"
-              value={formatNumber(kpis?.fraud_detected ?? 0)}
+              value={kpis?.fraud_detected ?? 0}
               icon={ShieldAlert}
               tone="fraud"
               hint={`${kpis?.fraud_percentage ?? 0}% of volume`}
+              trend={fraudTrend}
+              live
             />
             <KpiCard
               label="Blocked Transactions"
-              value={formatNumber(kpis?.blocked ?? 0)}
+              value={kpis?.blocked ?? 0}
               icon={Ban}
               tone="warning"
               hint={`${formatCurrency(kpis?.fraud_prevented_amount ?? 0)} prevented`}
             />
             <KpiCard
               label="Pending Investigation"
-              value={formatNumber(kpis?.pending_investigation ?? 0)}
+              value={kpis?.pending_investigation ?? 0}
               icon={AlertOctagon}
               tone="slate"
               hint="Open + In Progress"
             />
             <KpiCard
               label="High Risk Accounts"
-              value={formatNumber(kpis?.high_risk_accounts ?? 0)}
+              value={kpis?.high_risk_accounts ?? 0}
               icon={Users}
               tone="warning"
               hint="Last 24 hours"
             />
             <KpiCard
               label="Average Risk Score"
-              value={(kpis?.average_risk_score ?? 0).toFixed(1)}
+              value={kpis?.average_risk_score ?? 0}
+              format={(v) => v.toFixed(1)}
               icon={Gauge}
               tone="primary"
               hint="0 - 100 scale"
             />
             <KpiCard
               label="Fraud Prevention Rate"
-              value={`${kpis?.fraud_percentage ? (100 - kpis.fraud_percentage).toFixed(1) : "100.0"}%`}
+              value={kpis?.fraud_percentage ? 100 - kpis.fraud_percentage : 100}
+              format={(v) => `${v.toFixed(1)}%`}
               icon={ShieldCheck}
               tone="success"
               hint="Clean transaction rate"
             />
             <KpiCard
               label="Live Throughput"
-              value={`${kpis?.transactions_per_minute ?? 0}/min`}
+              value={kpis?.transactions_per_minute ?? 0}
+              format={(v) => `${Math.round(v)}/min`}
               icon={TrendingUp}
               tone="primary"
               hint="5-minute rolling average"
+              live
             />
           </div>
 
+          <SectionLabel>Trends &amp; Distribution</SectionLabel>
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
             <div className="xl:col-span-2">
               <FraudTrendChart data={dashboardQuery.data?.trend ?? []} />
@@ -113,8 +125,10 @@ export default function Dashboard() {
             <ChannelDistributionChart data={dashboardQuery.data?.channel_distribution ?? []} />
           </div>
 
+          <SectionLabel>Geographic Intelligence</SectionLabel>
           <GeoHeatMap data={dashboardQuery.data?.geo_points ?? []} />
 
+          <SectionLabel>Live Operations</SectionLabel>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <LiveActivityFeed initial={recentTxnQuery.data?.items ?? []} />
             <LatestAlertsList />
@@ -122,6 +136,15 @@ export default function Dashboard() {
         </div>
       )}
     </AppLayout>
+  );
+}
+
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <h2 className="shrink-0 text-xs font-semibold uppercase tracking-wider text-slate-400">{children}</h2>
+      <div className="h-px flex-1 bg-slate-200" />
+    </div>
   );
 }
 

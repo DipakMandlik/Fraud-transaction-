@@ -33,8 +33,8 @@ export function CommandCenterBar() {
   const txnsToday = useCountUp(kpis?.transactions_today ?? 0, 800);
 
   return (
-    <div className="flex h-10 shrink-0 items-center gap-6 overflow-x-auto border-b border-slate-200 bg-slate-900 px-6 text-xs text-slate-300">
-      <div className="flex shrink-0 items-center gap-2 font-semibold text-white">
+    <div className="flex h-10 shrink-0 items-center gap-6 overflow-x-auto border-b border-slate-800 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 px-6 text-xs text-slate-300 shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.04)]">
+      <div className="flex shrink-0 items-center gap-2 font-semibold tracking-wide text-white">
         <span className="relative flex h-2 w-2">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-fraud opacity-75" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-fraud" />
@@ -69,7 +69,7 @@ function Metric({
   accent?: string;
 }) {
   return (
-    <div className="flex shrink-0 items-center gap-1.5">
+    <div className="flex shrink-0 items-center gap-1.5 transition-colors">
       <Icon className="h-3.5 w-3.5 text-slate-500" />
       <span className="text-slate-500">{label}:</span>
       <span className={cn("font-semibold tabular-nums text-white", accent)}>{value}</span>

@@ -60,7 +60,7 @@ export function LiveActivityFeed({ initial }: { initial: Transaction[] }) {
                   key={txn.id}
                   onClick={() => navigate(`/transactions/${txn.id}`)}
                   className={cn(
-                    "flex w-full items-center justify-between gap-3 border-l-[3px] px-5 py-3 text-left font-sans transition-colors hover:bg-slate-50",
+                    "flex w-full items-center justify-between gap-3 border-l-[3px] px-5 py-3 text-left font-sans transition-all duration-150 hover:translate-x-0.5 hover:bg-slate-50",
                     txn.arrivedAt > 0 && "animate-slide-in",
                     isProcessing
                       ? "border-l-primary bg-primary-50/40"

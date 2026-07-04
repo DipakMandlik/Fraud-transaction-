@@ -84,7 +84,14 @@ export default function Customers() {
               <TBody>
                 {query.data?.items.map((c) => (
                   <TR key={c.id} className="cursor-pointer" onClick={() => navigate(`/customers/${c.id}`)}>
-                    <TD className="font-medium text-slate-800">{c.full_name}</TD>
+                    <TD className="font-medium text-slate-800">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-100 to-primary-200 text-[11px] font-semibold text-primary-700">
+                          {c.full_name.charAt(0)}
+                        </span>
+                        {c.full_name}
+                      </div>
+                    </TD>
                     <TD className="text-slate-500">{c.customer_code}</TD>
                     <TD>{c.city}</TD>
                     <TD>{c.occupation}</TD>

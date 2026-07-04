@@ -89,9 +89,9 @@ export function InvestigationTimeline({ alert }: { alert: AlertDetail }) {
   return (
     <ol className="relative space-y-5 border-l border-slate-200 pl-5">
       {events.map((event, i) => (
-        <li key={i} className="relative">
+        <li key={i} className="relative animate-rise" style={{ animationDelay: `${i * 90}ms` }}>
           <span
-            className={`absolute -left-[26px] top-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white ${toneDot[event.tone]}`}
+            className={`absolute -left-[26px] top-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white shadow-sm ring-1 ring-slate-100 ${toneDot[event.tone]}`}
           >
             <event.icon className="h-2.5 w-2.5 text-white" />
           </span>

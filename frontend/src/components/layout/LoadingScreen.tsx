@@ -20,13 +20,20 @@ export function LoadingScreen({ steps = DEFAULT_STEPS, intervalMs = 450 }: { ste
     return () => clearInterval(timer);
   }, [steps.length, intervalMs]);
 
+  const progress = ((index + 1) / steps.length) * 100;
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-white">
-      <Logo size="lg" className="mb-6 rounded-xl shadow-elevated" />
+      <Logo size="lg" className="mb-6 animate-fade-in rounded-xl shadow-elevated" />
       <div className="mb-4 h-1 w-48 overflow-hidden rounded-full bg-slate-100">
-        <div className="h-full animate-pulse rounded-full bg-primary" style={{ width: "70%" }} />
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-primary-400 to-primary transition-[width] duration-500 ease-premium"
+          style={{ width: `${progress}%` }}
+        />
       </div>
-      <p className="text-sm font-medium text-slate-500">{steps[index]}</p>
+      <p key={index} className="animate-fade-in text-sm font-medium text-slate-500">
+        {steps[index]}
+      </p>
     </div>
   );
 }

@@ -7,7 +7,7 @@ import { Activity } from "lucide-react";
 
 export function FraudTrendChart({ data }: { data: TrendPoint[] }) {
   return (
-    <Card>
+    <Card interactive>
       <CardHeader>
         <CardTitle>Transaction &amp; Fraud Trend</CardTitle>
       </CardHeader>
@@ -31,11 +31,32 @@ export function FraudTrendChart({ data }: { data: TrendPoint[] }) {
               <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#94A3B8" }} tickLine={false} axisLine={false} />
               <YAxis tick={{ fontSize: 11, fill: "#94A3B8" }} tickLine={false} axisLine={false} />
               <Tooltip
-                contentStyle={{ borderRadius: 12, border: "1px solid #E2E8F0", fontSize: 12 }}
-                labelStyle={{ fontWeight: 600 }}
+                cursor={{ stroke: "#CBD5E1", strokeWidth: 1, strokeDasharray: "4 4" }}
+                contentStyle={{ borderRadius: 12, border: "1px solid #E2E8F0", fontSize: 12, boxShadow: "0 12px 28px -8px rgba(15,23,42,0.16)" }}
+                labelStyle={{ fontWeight: 600, marginBottom: 4 }}
               />
-              <Area type="monotone" dataKey="total" name="Total Transactions" stroke="#2563EB" fill="url(#totalGradient)" strokeWidth={2} />
-              <Area type="monotone" dataKey="fraud" name="Fraud Detected" stroke="#DC2626" fill="url(#fraudGradient)" strokeWidth={2} />
+              <Area
+                type="monotone"
+                dataKey="total"
+                name="Total Transactions"
+                stroke="#2563EB"
+                fill="url(#totalGradient)"
+                strokeWidth={2}
+                activeDot={{ r: 5, strokeWidth: 2, stroke: "#fff" }}
+                animationDuration={900}
+                animationEasing="ease-out"
+              />
+              <Area
+                type="monotone"
+                dataKey="fraud"
+                name="Fraud Detected"
+                stroke="#DC2626"
+                fill="url(#fraudGradient)"
+                strokeWidth={2}
+                activeDot={{ r: 5, strokeWidth: 2, stroke: "#fff" }}
+                animationDuration={900}
+                animationEasing="ease-out"
+              />
             </AreaChart>
           </ResponsiveContainer>
         )}

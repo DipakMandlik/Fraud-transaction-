@@ -51,7 +51,7 @@ export function RiskGauge({ score, calculating = false, size = 200, className }:
         <circle
           cx="90" cy="90" r={RADIUS} fill="none" stroke={color} strokeWidth={14}
           strokeDasharray={`${filled} ${CIRCUMFERENCE}`} strokeLinecap="round"
-          style={{ transition: "stroke 0.3s ease" }}
+          style={{ transition: "stroke 0.3s ease, stroke-dasharray 0.3s ease", filter: `drop-shadow(0 0 6px ${color}55)` }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">

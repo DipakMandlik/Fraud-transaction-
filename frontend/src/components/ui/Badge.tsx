@@ -17,19 +17,28 @@ const toneClasses: Record<Tone, string> = {
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   tone?: Tone;
   dot?: boolean;
+  /** Adds a soft ring pulse — use for live/critical status that just changed. */
+  pulse?: boolean;
 }
 
-export function Badge({ className, tone = "slate", dot = false, children, ...props }: BadgeProps) {
+export function Badge({ className, tone = "slate", dot = false, pulse = false, children, ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors duration-200 animate-scale-in",
         toneClasses[tone],
         className
       )}
       {...props}
     >
-      {dot && <span className={cn("h-1.5 w-1.5 rounded-full", toneDotClasses[tone])} />}
+      {dot && (
+        <span className="relative flex h-1.5 w-1.5">
+          {pulse && (
+            <span className={cn("absolute inline-flex h-full w-full animate-ping rounded-full opacity-75", toneDotClasses[tone])} />
+          )}
+          <span className={cn("relative inline-flex h-1.5 w-1.5 rounded-full", toneDotClasses[tone])} />
+        </span>
+      )}
       {children}
     </span>
   );

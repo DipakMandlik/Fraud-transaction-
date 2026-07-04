@@ -134,7 +134,7 @@ export default function Analytics() {
           </ResponsiveContainer>
         </ChartCard>
 
-        <Card>
+        <Card interactive>
           <CardHeader>
             <CardTitle>Top Risk Customers</CardTitle>
           </CardHeader>
@@ -172,7 +172,7 @@ export default function Analytics() {
 
 function ChartCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <Card>
+    <Card interactive>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
@@ -189,9 +189,9 @@ function RateCard({ label, value, tone }: { label: string; value: number; tone: 
   }[tone];
 
   return (
-    <Card className="p-5">
+    <Card interactive className="p-5">
       <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-      <div className={`mt-2 inline-flex rounded-lg px-3 py-1.5 text-2xl font-bold ${toneClasses}`}>{value}%</div>
+      <div className={`mt-2 inline-flex rounded-lg px-3 py-1.5 text-2xl font-bold tabular-nums ${toneClasses}`}>{value}%</div>
     </Card>
   );
 }

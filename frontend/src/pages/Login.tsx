@@ -105,12 +105,7 @@ export default function Login() {
               </div>
             )}
 
-            <Button
-              type="submit"
-              className="w-full transition-transform duration-150 active:scale-[0.98]"
-              size="lg"
-              disabled={loading}
-            >
+            <Button type="submit" className="w-full" size="lg" loading={loading}>
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>

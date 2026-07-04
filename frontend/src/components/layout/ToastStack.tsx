@@ -32,7 +32,7 @@ export function ToastStack() {
             key={toast.toastId}
             role="alert"
             className={cn(
-              "animate-slide-in rounded-xl border-l-4 bg-white p-4 shadow-elevated",
+              "group relative animate-slide-in overflow-hidden rounded-xl border-l-4 bg-white p-4 shadow-popover transition-transform duration-200 hover:-translate-y-0.5",
               toneBorder[tone]
             )}
           >
@@ -64,6 +64,9 @@ export function ToastStack() {
               >
                 <X className="h-3.5 w-3.5" />
               </button>
+            </div>
+            <div className="absolute inset-x-0 bottom-0 h-0.5 bg-slate-100">
+              <div className={cn("h-full animate-toast-life group-hover:[animation-play-state:paused]", toneBorder[tone].replace("border-l-", "bg-"))} />
             </div>
           </div>
         );

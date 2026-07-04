@@ -44,9 +44,26 @@ export default function CustomerDetail() {
 
   return (
     <AppLayout title={customer.full_name} subtitle={`${customer.customer_code} · ${customer.city}, ${customer.state}`}>
-      <Button variant="ghost" size="sm" className="mb-4" onClick={() => navigate(-1)}>
-        <ArrowLeft className="h-4 w-4" /> Back
-      </Button>
+      <div className="mb-4 flex items-center justify-between">
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-4 w-4" /> Back
+        </Button>
+      </div>
+
+      <div className="mb-6 flex items-center gap-4 rounded-2xl border border-slate-200 bg-gradient-to-r from-white to-slate-50 p-5 shadow-card">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-100 to-primary-200 text-xl font-bold text-primary-700 ring-4 ring-white">
+          {customer.full_name.charAt(0)}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-lg font-bold text-slate-900">{customer.full_name}</p>
+          <p className="text-sm text-slate-500">
+            {customer.customer_code} &middot; {customer.city}, {customer.state}
+          </p>
+        </div>
+        <Badge tone={RISK_TONE[customer.risk_segment]} className="ml-auto shrink-0">
+          {customer.risk_segment} RISK
+        </Badge>
+      </div>
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Risk Segment" value={customer.risk_segment} tone={RISK_TONE[customer.risk_segment]} />
@@ -195,10 +212,10 @@ export default function CustomerDetail() {
 
 function StatCard({ label, value, tone }: { label: string; value: string; tone?: "green" | "blue" | "red" }) {
   return (
-    <Card className="p-4">
+    <Card interactive className="p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
       <div className="mt-2">
-        {tone ? <Badge tone={tone} className="text-base font-bold">{value}</Badge> : <p className="text-xl font-bold text-slate-900">{value}</p>}
+        {tone ? <Badge tone={tone} className="text-base font-bold">{value}</Badge> : <p className="text-xl font-bold tabular-nums text-slate-900">{value}</p>}
       </div>
     </Card>
   );

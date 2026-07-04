@@ -14,7 +14,10 @@ export function NotificationBell() {
   return (
     <div className="relative">
       <button
-        className="relative flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        className={cn(
+          "relative flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-all duration-150 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+          unreadCount > 0 && "text-primary-600"
+        )}
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
         aria-haspopup="true"
         aria-expanded={open}
@@ -23,9 +26,9 @@ export function NotificationBell() {
           if (!open) markAllRead();
         }}
       >
-        <Bell className="h-5 w-5" />
+        <Bell className={cn("h-5 w-5 transition-transform", unreadCount > 0 && "animate-[wiggle_0.4s_ease-in-out]")} />
         {unreadCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-fraud px-1 text-[10px] font-bold text-white">
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-fraud px-1 text-[10px] font-bold text-white ring-2 ring-white">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
@@ -34,7 +37,7 @@ export function NotificationBell() {
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-40 mt-2 w-96 rounded-xl border border-slate-200 bg-white shadow-elevated">
+          <div className="absolute right-0 z-40 mt-2 w-96 origin-top-right animate-scale-in rounded-xl border border-slate-200 bg-white shadow-popover">
             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
               <p className="text-sm font-semibold text-slate-900">Fraud Alerts</p>
               <Badge tone="red">{alerts.length} recent</Badge>
@@ -44,7 +47,7 @@ export function NotificationBell() {
               {alerts.map((alert) => (
                 <button
                   key={alert.id}
-                  className="flex w-full flex-col items-start gap-1 border-b border-slate-50 px-4 py-3 text-left hover:bg-slate-50"
+                  className="flex w-full flex-col items-start gap-1 border-b border-slate-50 px-4 py-3 text-left transition-colors hover:bg-slate-50"
                   onClick={() => {
                     setOpen(false);
                     navigate(`/alerts/${alert.id}`);

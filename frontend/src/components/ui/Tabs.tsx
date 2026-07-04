@@ -17,9 +17,9 @@ export function TabsTrigger({ className, ...props }: RadixTabs.TabsTriggerProps)
   return (
     <RadixTabs.Trigger
       className={cn(
-        "rounded-md px-3 py-1.5 text-sm font-medium text-slate-500 transition-colors",
+        "rounded-md px-3 py-1.5 text-sm font-medium text-slate-500 transition-all duration-200 ease-premium",
         "data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm",
-        "hover:text-slate-700",
+        "hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
         className
       )}
       {...props}
@@ -28,5 +28,5 @@ export function TabsTrigger({ className, ...props }: RadixTabs.TabsTriggerProps)
 }
 
 export function TabsContent({ className, ...props }: RadixTabs.TabsContentProps) {
-  return <RadixTabs.Content className={cn("mt-4 focus:outline-none", className)} {...props} />;
+  return <RadixTabs.Content className={cn("mt-4 animate-rise focus:outline-none", className)} {...props} />;
 }
