@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
@@ -122,11 +122,12 @@ def request_verification_alert(alert_id: int, payload: AlertActionRequest, db: S
     return _alert_to_out(alert)
 
 
-@router.get("/{alert_id}/report", response_class=PlainTextResponse)
-def get_investigation_report(alert_id: int, db: Session = Depends(get_db)) -> PlainTextResponse:
+@router.get("/{alert_id}/report")
+def get_investigation_report(alert_id: int, db: Session = Depends(get_db)) -> Response:
     alert = _get_or_404(db, alert_id)
-    report = build_investigation_report(alert)
-    return PlainTextResponse(
-        report,
-        headers={"Content-Disposition": f"attachment; filename={alert.alert_ref}_report.txt"},
+    pdf_bytes = build_investigation_report(alert)
+    return Response(
+        pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{alert.alert_ref}_investigation_report.pdf"'},
     )

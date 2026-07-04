@@ -1,0 +1,15 @@
+DejaVu Sans (Regular, Bold)
+
+Fonts are (c) Bitstream (see below), with Reserved Font Names "DejaVu" being
+added by DejaVu fonts team. Bitstream Vera authors and additional glyphs
+authors are given in the file AUTHORS.
+
+This font software is licensed under the Bitstream Vera License with the
+DejaVu fonts team's changes, both of which permit unlimited use, copying,
+modification, and redistribution, including embedding in documents/software,
+provided the copyright and license notices are preserved.
+
+Full license text: https://dejavu-fonts.github.io/License.html
+
+Vendored here so PDF reports render Unicode currency symbols (e.g. ₹)
+correctly regardless of what fonts are installed on the deployment host.
