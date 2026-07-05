@@ -160,10 +160,21 @@ export interface Rule {
   category: string;
   weight: number;
   threshold: number | null;
-  config: Record<string, unknown>;
+  config: Record<string, number>;
   enabled: boolean;
   priority: number;
   updated_at: string;
+  default_weight: number;
+  default_threshold: number | null;
+  default_config: Record<string, number>;
+  default_priority: number;
+}
+
+export interface RuleStat {
+  code: string;
+  evaluated_count: number;
+  triggered_count: number;
+  trigger_rate: number;
 }
 
 export interface Investigation {

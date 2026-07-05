@@ -12,6 +12,7 @@ import type {
   DemoTriggerResponse,
   PaginatedResponse,
   Rule,
+  RuleStat,
   Transaction,
 } from "@/types";
 
@@ -153,7 +154,8 @@ export const customersApi = {
 
 export const rulesApi = {
   list: () => api.get<Rule[]>("/rules").then((r) => r.data),
-  update: (id: number, payload: Partial<Pick<Rule, "weight" | "threshold" | "enabled" | "priority">>) =>
+  stats: (hours = 24) => api.get<RuleStat[]>("/rules/stats", { params: { hours } }).then((r) => r.data),
+  update: (id: number, payload: Partial<Pick<Rule, "weight" | "threshold" | "config" | "enabled" | "priority">>) =>
     api.patch<Rule>(`/rules/${id}`, payload).then((r) => r.data),
 };
 

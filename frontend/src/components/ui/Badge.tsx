@@ -2,7 +2,7 @@ import type { HTMLAttributes } from "react";
 
 import { cn } from "@/lib/utils";
 
-type Tone = "slate" | "blue" | "green" | "amber" | "orange" | "red" | "purple";
+export type Tone = "slate" | "blue" | "green" | "amber" | "orange" | "red" | "purple";
 
 const toneClasses: Record<Tone, string> = {
   slate: "bg-slate-100 text-slate-700",
