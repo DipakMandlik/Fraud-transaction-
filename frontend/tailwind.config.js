@@ -95,6 +95,17 @@ export default {
           "25%": { transform: "rotate(-12deg)" },
           "75%": { transform: "rotate(12deg)" },
         },
+        "flow-dot": {
+          "0%": { left: "0%", opacity: 0 },
+          "8%": { opacity: 1 },
+          "92%": { opacity: 1 },
+          "100%": { left: "100%", opacity: 0 },
+        },
+        "node-pulse": {
+          "0%": { transform: "scale(1)" },
+          "40%": { transform: "scale(1.12)" },
+          "100%": { transform: "scale(1)" },
+        },
       },
       animation: {
         "slide-in": "slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -105,6 +116,8 @@ export default {
         shimmer: "shimmer 1.8s ease-in-out infinite",
         rise: "rise 0.35s cubic-bezier(0.16, 1, 0.3, 1) both",
         "toast-life": "shrink-width 7s linear forwards",
+        "flow-dot": "flow-dot 2.4s linear infinite",
+        "node-pulse": "node-pulse 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
       },
     },
   },

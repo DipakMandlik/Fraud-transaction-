@@ -9,6 +9,7 @@ import { NotificationsProvider } from "@/hooks/useNotifications";
 import AlertDetail from "@/pages/AlertDetail";
 import Alerts from "@/pages/Alerts";
 import Analytics from "@/pages/Analytics";
+import Architecture from "@/pages/Architecture";
 import CustomerDetail from "@/pages/CustomerDetail";
 import Customers from "@/pages/Customers";
 import Dashboard from "@/pages/Dashboard";
@@ -59,6 +60,7 @@ export default function App() {
             <Route path="/alerts/:id" element={<ProtectedRoute><AlertDetail /></ProtectedRoute>} />
             <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
             <Route path="/rules" element={<ProtectedRoute><Rules /></ProtectedRoute>} />
+            <Route path="/architecture" element={<ProtectedRoute><Architecture /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>

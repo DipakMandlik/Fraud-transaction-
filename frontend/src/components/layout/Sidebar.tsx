@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   ListTree,
+  Network,
   Radar,
   ShieldAlert,
   ShieldCheck,
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { to: "/alerts", label: "Fraud Alert Center", icon: ShieldAlert },
   { to: "/analytics", label: "Analytics", icon: SlidersHorizontal },
   { to: "/rules", label: "Rule Engine", icon: ShieldCheck },
+  { to: "/architecture", label: "Architecture", icon: Network },
 ];
 
 interface SidebarProps {
